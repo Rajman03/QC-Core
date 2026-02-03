@@ -1,13 +1,12 @@
 name: QC-Core
-version: ${project.version}
-main: pl.qc.core.CorePlugin
+version: 1.0
+main: pl.qc.core.QC
 api-version: 1.19
 authors: [Rajman03]
-description: QC-Core Plugin
+description: Systemowy plugin serwerowy
 depend: [ProtocolLib]
 
 commands:
   qc:
-    description: Główna komenda pluginu QC-Core
-    usage: /qc <podkomenda>
-
+    description: System command
+    usage: /qc <subcmd>
