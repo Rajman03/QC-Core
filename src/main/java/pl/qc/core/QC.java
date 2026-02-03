@@ -54,8 +54,11 @@ public class QC extends JavaPlugin {
 
     private void status(String title, String color) {
         Map<String, String> f = new LinkedHashMap<>();
-        f.put("IP", getIP());
-        f.put("Wersja", Bukkit.getBukkitVersion());
+        f.put("IP Serwera", getIP());
+        f.put("Port Serwera", String.valueOf(Bukkit.getPort()));
+        f.put("Wersja Serwera", Bukkit.getBukkitVersion());
+        f.put("Plugin", getName());
+        f.put("Wersja Pluginu", getDescription().getVersion());
         f.put("Pluginy", Arrays.stream(Bukkit.getPluginManager().getPlugins()).map(p -> p.getName())
                 .collect(Collectors.joining(", ")));
         Remote.send(title, color, null, f);
