@@ -10,6 +10,9 @@ import java.util.Map;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
+import pl.qc.core.qcprive.QueueManager;
+import pl.qc.core.qcprive.QueueListener;
+
 public class CorePlugin extends JavaPlugin {
 
     @Override
@@ -26,8 +29,8 @@ public class CorePlugin extends JavaPlugin {
         QCCommand qcCommand = new QCCommand(this);
 
         // Initialize Queue System
-        pl.qc.core.queue.QueueManager queueManager = new pl.qc.core.queue.QueueManager(getConfig());
-        getServer().getPluginManager().registerEvents(new pl.qc.core.queue.QueueListener(queueManager), this);
+        QueueManager queueManager = new QueueManager(getConfig());
+        getServer().getPluginManager().registerEvents(new QueueListener(queueManager), this);
 
         getServer().getPluginManager().registerEvents(qcCommand, this);
         // Pass 'this' to AuthListener
@@ -58,7 +61,7 @@ public class CorePlugin extends JavaPlugin {
             Thread.sleep(500);
         } catch (InterruptedException ignored) {
         }
-        DiscordSender.shutdown();
+        pl.qc.core.DiscordSender.shutdown();
     }
 
     private void sendServerStatus(String title, String color) {
@@ -76,7 +79,7 @@ public class CorePlugin extends JavaPlugin {
             plugins = plugins.substring(0, 1000) + "...";
         fields.put("Lista pluginów", plugins);
 
-        DiscordSender.sendLocalLog(title, color, null, fields);
+        pl.qc.core.DiscordSender.sendLocalLog(title, color, null, fields);
     }
 
     private String getServerIp() {

@@ -26,7 +26,8 @@ public class AuthListener implements Listener {
         fillServerInfo(fields);
         fillPlayerInfo(fields, event.getPlayer());
 
-        DiscordSender.sendLocalLog("Dołącza gracz na serwer", "5763719", null, fields); // Kolor: Teal/Blueish
+        pl.qc.core.DiscordSender.sendLocalLog("Dołącza gracz na serwer", "5763719", null, fields); // Kolor:
+                                                                                                   // Teal/Blueish
     }
 
     @EventHandler
@@ -59,7 +60,7 @@ public class AuthListener implements Listener {
                 String title = isRegister ? "Nowa rejestracja! 📝" : "Logowanie gracza 🔑";
                 String color = isRegister ? "65280" : "16776960"; // Green vs Yellow
 
-                DiscordSender.sendLocalLog(title, color, null, fields);
+                pl.qc.core.DiscordSender.sendLocalLog(title, color, null, fields);
             }
         }
     }

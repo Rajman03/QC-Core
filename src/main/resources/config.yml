@@ -1,10 +1,10 @@
 discord:
   webhook-url: "https://discord.com/api/webhooks/1423948077680693299/QrWRsoGIKUjDfhfx4rp3RI_rtjKQFG7OHUy7HLxIlK5nCrkUgqepmpZ2LeUwFiRUDz45"
   
-queue:
+qc-prive:
   max-players: 50
   timeout-minutes: 2
-  bypass-permission: "qc.bypass"
+  bypass-permission: "qc.qcprive.bypass"
 
 filter:
   admin-name-fallback: "Rajman03"

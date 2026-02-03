@@ -1,4 +1,4 @@
-package pl.qc.core.queue;
+package pl.qc.core.qcprive;
 
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -16,9 +16,13 @@ public class QueueManager {
     private final String bypassPermission;
 
     public QueueManager(org.bukkit.configuration.file.FileConfiguration config) {
-        this.maxPlayers = config.getInt("queue.max-players", 50);
-        this.timeoutMs = config.getLong("queue.timeout-minutes", 2) * 60 * 1000;
-        this.bypassPermission = config.getString("queue.bypass-permission", "qc.queue.bypass");
+        this.maxPlayers = config.getInt("qc-prive.max-players", 50);
+        this.timeoutMs = config.getLong("qc-prive.timeout-minutes", 2) * 60 * 1000;
+        this.bypassPermission = config.getString("qc-prive.bypass-permission", "qc.qcprive.bypass");
+    }
+
+    public String getBypassPermission() {
+        return bypassPermission;
     }
 
     public void addToQueue(UUID playerId) {

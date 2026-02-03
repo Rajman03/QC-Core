@@ -1,4 +1,4 @@
-package pl.qc.core.queue;
+package pl.qc.core.qcprive;
 
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -34,7 +34,7 @@ public class QueueListener implements Listener {
         // albo musimy nadpisywać wynik eventu.
 
         if (event.getResult() == PlayerLoginEvent.Result.KICK_FULL) {
-            if (event.getPlayer().hasPermission("qc.queue.bypass")) {
+            if (event.getPlayer().hasPermission(queueManager.getBypassPermission())) {
                 event.allow(); // VIP wchodzi mimo pełnego serwera
             } else {
                 UUID uuid = event.getPlayer().getUniqueId();
