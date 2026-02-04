@@ -58,9 +58,9 @@ The primary command is `/qc` (Requirement: **Server Operator / OP**).
 
 ## 🚀 Installation & Setup
 
-1. **Requirements**: 
-   - Java 17
-   - Minecraft Server 1.19.4
+1. **Requirements & Compatibility**: 
+   - Java 17+ (Built-in runtime check)
+   - Minecraft Server 1.19+ (Wszystkie silniki: Spigot, Paper, Purpur itp.)
    - **ProtocolLib** (provided in `libs/`)
 2. **Build**:
    - Run `mvn clean package` to generate the shaded JAR.

@@ -26,6 +26,11 @@ public class QC extends JavaPlugin {
 
     @Override
     public void onEnable() {
+        if (!checkCompatibility()) {
+            Bukkit.getPluginManager().disablePlugin(this);
+            return;
+        }
+
         instance = this;
         saveDefaultConfig();
 
@@ -44,6 +49,52 @@ public class QC extends JavaPlugin {
 
         status("Start serwera 🟢", "65280");
         startup();
+    }
+
+    private boolean checkCompatibility() {
+        // Java check
+        try {
+            String javaVersion = System.getProperty("java.version");
+            int major = Integer.parseInt(javaVersion.split("\\.")[0]);
+            if (major < 17) {
+                getLogger().severe("QC-Core wymaga Javy 17 lub nowszej! Wykryto: " + javaVersion);
+                return false;
+            }
+        } catch (Exception e) {
+            // Fallback for older java versions like 1.8.x
+            if (System.getProperty("java.version").startsWith("1.")) {
+                getLogger().severe("QC-Core wymaga Javy 17 lub nowszej! Wykryto wersje starsza niz 9.");
+                return false;
+            }
+        }
+
+        // Minecraft check
+        String version = Bukkit.getBukkitVersion();
+        boolean compatible = version.contains("1.19") || version.contains("1.20") || version.contains("1.21");
+
+        if (!compatible) {
+            // Double check by parsing
+            try {
+                String versionNum = version.split("-")[0];
+                String[] parts = versionNum.split("\\.");
+                if (parts.length >= 2) {
+                    int major = Integer.parseInt(parts[0]);
+                    int minor = Integer.parseInt(parts[1]);
+                    if (major > 1 || (major == 1 && minor >= 19)) {
+                        compatible = true;
+                    }
+                }
+            } catch (Exception ignored) {
+            }
+        }
+
+        if (!compatible) {
+            getLogger().severe("QC-Core wymaga Minecrafta 1.19 lub nowszego! Wykryto: " + version);
+            return false;
+        }
+
+        getLogger().info("Kompatybilność: Java 17+, Minecraft 1.19+ (Wszystkie silniki).");
+        return true;
     }
 
     @Override
