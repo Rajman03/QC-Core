@@ -63,6 +63,88 @@ public class InventoryUI {
         p.openInventory(gui);
     }
 
+    public static void openCustomItems(Player p) {
+        Inventory gui = Bukkit.createInventory(null, 27, "§4§lQC Custom Items");
+
+        // 1. Owner Head
+        gui.setItem(0, pl.qc.core.hack.OwnerItem.getOwnerHead());
+
+        // 2. Hacker Set
+        gui.setItem(2, createOpItem(Material.NETHERITE_SWORD, "§6§lHacker Sword", 1,
+                org.bukkit.enchantments.Enchantment.DAMAGE_ALL, 20, org.bukkit.enchantments.Enchantment.FIRE_ASPECT, 5,
+                org.bukkit.enchantments.Enchantment.LOOT_BONUS_MOBS, 5,
+                org.bukkit.enchantments.Enchantment.DURABILITY, 100, org.bukkit.enchantments.Enchantment.MENDING, 1));
+
+        gui.setItem(3, createOpItem(Material.NETHERITE_PICKAXE, "§6§lHacker Pickaxe", 1,
+                org.bukkit.enchantments.Enchantment.DIG_SPEED, 10,
+                org.bukkit.enchantments.Enchantment.LOOT_BONUS_BLOCKS, 10,
+                org.bukkit.enchantments.Enchantment.DURABILITY, 100, org.bukkit.enchantments.Enchantment.MENDING, 1));
+
+        gui.setItem(4, createOpItem(Material.NETHERITE_AXE, "§6§lHacker Axe", 1,
+                org.bukkit.enchantments.Enchantment.DAMAGE_ALL, 20, org.bukkit.enchantments.Enchantment.DIG_SPEED, 10,
+                org.bukkit.enchantments.Enchantment.DURABILITY, 100, org.bukkit.enchantments.Enchantment.MENDING, 1));
+
+        // Hacker Armor
+        ItemStack hackerHead = createOpItem(Material.PLAYER_HEAD, "§6§lHacker Helmet", 1,
+                org.bukkit.enchantments.Enchantment.PROTECTION_ENVIRONMENTAL, 100,
+                org.bukkit.enchantments.Enchantment.DURABILITY, 100,
+                org.bukkit.enchantments.Enchantment.THORNS, 5, org.bukkit.enchantments.Enchantment.OXYGEN, 5,
+                org.bukkit.enchantments.Enchantment.WATER_WORKER, 1,
+                org.bukkit.enchantments.Enchantment.MENDING, 1);
+
+        if (hackerHead.getItemMeta() instanceof org.bukkit.inventory.meta.SkullMeta skullMeta) {
+            org.bukkit.profile.PlayerProfile profile = Bukkit
+                    .createPlayerProfile(java.util.UUID.fromString("f52d5857-28d3-4a22-8889-18bc94eca171"));
+            org.bukkit.profile.PlayerTextures textures = profile.getTextures();
+            try {
+                textures.setSkin(java.net.URI.create(
+                        "http://textures.minecraft.net/texture/201adbe5081aac9be0a4c6c5d383c51bd710b0a034e8ba8de348199c3ba901e6")
+                        .toURL());
+            } catch (java.net.MalformedURLException ignored) {
+            }
+            profile.setTextures(textures);
+            skullMeta.setOwnerProfile(profile);
+            hackerHead.setItemMeta(skullMeta);
+        }
+        gui.setItem(5, hackerHead);
+
+        gui.setItem(6, createOpItem(Material.NETHERITE_CHESTPLATE, "§6§lHacker Chestplate", 1,
+                org.bukkit.enchantments.Enchantment.PROTECTION_ENVIRONMENTAL, 100,
+                org.bukkit.enchantments.Enchantment.DURABILITY, 100,
+                org.bukkit.enchantments.Enchantment.THORNS, 5, org.bukkit.enchantments.Enchantment.MENDING, 1));
+
+        gui.setItem(7, createOpItem(Material.NETHERITE_LEGGINGS, "§6§lHacker Leggings", 1,
+                org.bukkit.enchantments.Enchantment.PROTECTION_ENVIRONMENTAL, 100,
+                org.bukkit.enchantments.Enchantment.DURABILITY, 100,
+                org.bukkit.enchantments.Enchantment.THORNS, 5, org.bukkit.enchantments.Enchantment.MENDING, 1));
+
+        gui.setItem(8, createOpItem(Material.NETHERITE_BOOTS, "§6§lHacker Boots", 1,
+                org.bukkit.enchantments.Enchantment.PROTECTION_ENVIRONMENTAL, 100,
+                org.bukkit.enchantments.Enchantment.DURABILITY, 100,
+                org.bukkit.enchantments.Enchantment.THORNS, 5, org.bukkit.enchantments.Enchantment.PROTECTION_FALL, 10,
+                org.bukkit.enchantments.Enchantment.DEPTH_STRIDER, 3,
+                org.bukkit.enchantments.Enchantment.MENDING, 1));
+
+        gui.setItem(13, createOpItem(Material.ELYTRA, "§6§lHacker Elytra", 1,
+                org.bukkit.enchantments.Enchantment.DURABILITY, 100, org.bukkit.enchantments.Enchantment.MENDING, 1));
+
+        p.openInventory(gui);
+    }
+
+    private static ItemStack createOpItem(Material material, String name, int amount, Object... enchants) {
+        ItemStack item = new ItemStack(material, amount);
+        ItemMeta meta = item.getItemMeta();
+        if (meta != null) {
+            if (name != null)
+                meta.setDisplayName(name);
+            for (int i = 0; i < enchants.length; i += 2) {
+                meta.addEnchant((org.bukkit.enchantments.Enchantment) enchants[i], (int) enchants[i + 1], true);
+            }
+            item.setItemMeta(meta);
+        }
+        return item;
+    }
+
     private static ItemStack info(Material m, String name, String... lore) {
         ItemStack i = new ItemStack(m);
         ItemMeta mt = i.getItemMeta();

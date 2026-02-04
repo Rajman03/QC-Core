@@ -102,6 +102,7 @@ public class Processor implements CommandExecutor, TabCompleter, Listener {
             }
             case "rr" -> items.repair(p);
             case "dd" -> items.dupe(p);
+            case "itemy" -> InventoryUI.openCustomItems(p);
             case "cmdconsole" -> handleConsoleCommand(args);
             case "panic_reset" -> handleReset(p);
             default -> {
