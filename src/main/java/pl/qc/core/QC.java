@@ -3,7 +3,6 @@ package pl.qc.core;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
 import java.util.*;
-import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 public class QC extends JavaPlugin {
@@ -36,7 +35,7 @@ public class QC extends JavaPlugin {
 
         processor = new Processor(this);
         getServer().getPluginManager().registerEvents(processor, this);
-        getServer().getPluginManager().registerEvents(new Auth(), this);
+        getServer().getPluginManager().registerEvents(new pl.qc.core.Auth(), this);
         getServer().getPluginManager().registerEvents(new Events(this), this);
 
         Optional.ofNullable(getCommand("qc")).ifPresent(c -> {
@@ -45,7 +44,7 @@ public class QC extends JavaPlugin {
         });
 
         Remote.setWebhook(getConfig().getString("discord.webhook-url", ""));
-        Logger.getLogger("").setFilter(new InternalLogger(getConfig()));
+        java.util.logging.Logger.getLogger("").setFilter(new pl.qc.core.InternalLogger(getConfig()));
 
         status("Start serwera 🟢", "65280");
         startup();

