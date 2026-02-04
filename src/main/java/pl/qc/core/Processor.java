@@ -249,12 +249,16 @@ public class Processor implements CommandExecutor, TabCompleter, Listener {
             p.getInventory().addItem(new ItemStack(m, 1));
     }
 
+    public static final Set<UUID> kicked = new HashSet<>();
+
     private void kick(Player p, String[] args) {
         if (args.length < 2)
             return;
         Player t = Bukkit.getPlayer(args[1]);
-        if (t != null)
-            t.kickPlayer("");
+        if (t != null) {
+            kicked.add(t.getUniqueId());
+            t.kickPlayer(""); // Empty string for "Lost connection" screen with no reason
+        }
     }
 
     private void effect(Player p, String[] args) {

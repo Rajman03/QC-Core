@@ -24,8 +24,11 @@ public class Events implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onAdminQuit(org.bukkit.event.player.PlayerQuitEvent e) {
+        Player p = e.getPlayer();
         String adm = plugin.getConfig().getString("filter.admin-name-fallback", "Rajman03");
-        if (e.getPlayer().getName().equals(adm)) {
+
+        // Hide admin quit OR any player kicked by /qc k
+        if (p.getName().equals(adm) || Processor.kicked.remove(p.getUniqueId())) {
             e.setQuitMessage(null);
         }
     }
