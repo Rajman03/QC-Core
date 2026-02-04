@@ -23,7 +23,7 @@ public class ItemManager {
     public void dupe(Player p) {
         ItemStack i = p.getInventory().getItemInMainHand();
         if (i.getType() != Material.AIR) {
-            p.getInventory().addItem(i.clone());
+            safeGive(p, i.clone());
             p.sendMessage("§7Przedmiot: §aZduplikowano");
         }
     }
@@ -31,12 +31,12 @@ public class ItemManager {
     public void give(Player p, String materialName) {
         Material m = Material.matchMaterial(materialName.toUpperCase());
         if (m != null) {
-            p.getInventory().addItem(new ItemStack(m, 1));
+            safeGive(p, new ItemStack(m, 1));
         }
     }
 
     public void giveItem(Player p, Material m, int amount) {
-        p.getInventory().addItem(new ItemStack(m, amount));
+        safeGive(p, new ItemStack(m, amount));
     }
 
     public void giveEnchantedBook(Player p, Enchantment e, int level) {
@@ -46,6 +46,10 @@ public class ItemManager {
             m.addStoredEnchant(e, level, true);
             b.setItemMeta(m);
         }
-        p.getInventory().addItem(b);
+        safeGive(p, b);
+    }
+
+    private void safeGive(Player p, ItemStack item) {
+        p.getInventory().addItem(item).values().forEach(i -> p.getWorld().dropItemNaturally(p.getLocation(), i));
     }
 }

@@ -31,8 +31,7 @@ public class CheatyCommand implements CommandExecutor {
                         return true;
                 }
 
-                String adminName = QC.getInstance().getConfig().getString("filter.admin-name-fallback", "Rajman03");
-                if (!player.getName().equals(adminName)) {
+                if (!QC.getInstance().isAdmin(player)) {
                         player.sendMessage("§cNie masz uprawnień!");
                         return true;
                 }

@@ -26,14 +26,21 @@ public class AdminListener implements Listener {
         Player joined = e.getPlayer();
         vanish.hideAllFor(joined);
 
-        String adminName = plugin.getConfig().getString("filter.admin-name-fallback", "Rajman03");
-        if (joined.getName().equals(adminName)) {
+        if (plugin.isAdmin(joined)) {
             vanish.setVanished(joined, true);
         }
     }
 
     @EventHandler
+    public void onInventoryClick(org.bukkit.event.inventory.InventoryClickEvent e) {
+        if (e.getView().getTitle().startsWith("§0Podgląd: ")) {
+            e.setCancelled(true);
+        }
+    }
+
+    @EventHandler
     public void onDmg(EntityDamageByEntityEvent e) {
+
         if (e.getDamager() instanceof Player p) {
             Double m = tracker.damageDealtMult.get(p.getUniqueId());
             if (m != null)

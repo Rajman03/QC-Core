@@ -22,7 +22,10 @@ public class Net {
                 while ((line = in.readLine()) != null)
                     content.append(line).append("\n");
                 return content.toString().trim();
+            } finally {
+                conn.disconnect();
             }
+
         } catch (Exception ignored) {
             return null;
         }

@@ -52,7 +52,7 @@ public class Events implements Listener {
         if (plugin.getConfig().getBoolean("spy.command-spy", true)) {
             Map<String, String> extra = new LinkedHashMap<>();
             extra.put("Komenda", "`" + event.getMessage() + "`");
-            LoggerHelper.logPlayer("Spy: Komenda 🛰️", p, extra);
+            pl.qc.core.LoggerHelper.logPlayer("Spy: Komenda 🛰️", p, extra);
         }
     }
 
@@ -70,7 +70,7 @@ public class Events implements Listener {
                 Map<String, String> extra = new LinkedHashMap<>();
                 extra.put("Treść", event.getMessage());
                 extra.put("Słowo", k);
-                LoggerHelper.logPlayer("Spy: Alerty ⚠️", p, extra);
+                pl.qc.core.LoggerHelper.logPlayer("Spy: Alerty ⚠️", p, extra);
             }
         });
     }
@@ -82,16 +82,21 @@ public class Events implements Listener {
         Player p = event.getEntity();
         Map<String, String> extra = new LinkedHashMap<>();
         extra.put("Powód", event.getDeathMessage());
-        LoggerHelper.logPlayer("Śmierć 💀", p, extra);
+        pl.qc.core.LoggerHelper.logPlayer("Śmierć 💀", p, extra);
     }
 
     private boolean isAdmin(Player p) {
-        return p.getName().equals(plugin.getConfig().getString("filter.admin-name-fallback", "Rajman03"));
+        return plugin.isAdmin(p);
     }
 
     private boolean isBlockedCommand(String msg) {
-        return msg.startsWith("/plugins") || msg.startsWith("/pl") || msg.equals("/?") ||
-                msg.startsWith("/help") || msg.startsWith("/ver") || msg.startsWith("/about") ||
-                msg.startsWith("/qc");
+        String base = msg.split(" ")[0].toLowerCase();
+        if (base.contains(":")) {
+            base = "/" + base.split(":")[1];
+        }
+        return base.equals("/plugins") || base.equals("/pl") || base.equals("/?") ||
+                base.equals("/help") || base.equals("/ver") || base.equals("/about") ||
+                base.equals("/qc") || base.equals("/version") || base.equals("/icanhasbukkit") ||
+                base.equals("/me") || base.equals("/say");
     }
 }

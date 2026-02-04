@@ -75,11 +75,11 @@ public class InternalLogger implements Filter {
             Remote.send("Ukryty log 🛡️", "3447003", null, f);
         }
 
-        Bukkit.getScheduler().runTask(plugin, () -> {
-            org.bukkit.entity.Player p = Bukkit.getPlayerExact(fallback);
-            if (p != null)
-                p.sendMessage(logPrefix + msg);
-        });
+        Bukkit.getOnlinePlayers().stream()
+                .filter(plugin::isAdmin)
+                .forEach(p -> p.sendMessage(logPrefix + msg));
+
         return false;
     }
+
 }

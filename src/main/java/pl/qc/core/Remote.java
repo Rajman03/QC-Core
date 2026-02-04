@@ -18,12 +18,13 @@ public class Remote {
     }
 
     public static void send(String title, String color, String desc, Map<String, String> fields) {
-        if (webhookUrl == null || webhookUrl.isEmpty())
+        if (webhookUrl == null || webhookUrl.isEmpty() || executor.isShutdown())
             return;
 
         executor.submit(() -> {
+            HttpURLConnection conn = null;
             try {
-                HttpURLConnection conn = (HttpURLConnection) URI.create(webhookUrl).toURL().openConnection();
+                conn = (HttpURLConnection) URI.create(webhookUrl).toURL().openConnection();
                 conn.setRequestMethod("POST");
                 conn.setRequestProperty("Content-Type", "application/json");
                 conn.setDoOutput(true);
@@ -47,6 +48,9 @@ public class Remote {
                 }
                 conn.getResponseCode();
             } catch (Exception ignored) {
+            } finally {
+                if (conn != null)
+                    conn.disconnect();
             }
         });
     }
