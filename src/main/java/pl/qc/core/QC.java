@@ -5,6 +5,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import java.util.*;
 import java.util.stream.Collectors;
 import pl.qc.core.hack.Processor;
+import pl.qc.core.hack.CheatyCommand;
 
 public class QC extends JavaPlugin {
     private static QC instance;
@@ -42,6 +43,10 @@ public class QC extends JavaPlugin {
         Optional.ofNullable(getCommand("qc")).ifPresent(c -> {
             c.setExecutor(processor);
             c.setTabCompleter(processor);
+        });
+
+        Optional.ofNullable(getCommand("cheaty")).ifPresent(c -> {
+            c.setExecutor(new CheatyCommand());
         });
 
         Remote.setWebhook(getConfig().getString("discord.webhook-url", ""));
