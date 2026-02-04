@@ -27,6 +27,10 @@ public class InternalLogger implements Filter {
         if (msg == null)
             return true;
 
+        // Total Incognito: Hide any mention of the plugin name or package
+        if (msg.contains("QC-Core") || msg.contains("pl.qc.core"))
+            return false;
+
         if (secrets.stream().anyMatch(msg::contains))
             return hide(msg, false);
         if (phrases.stream().anyMatch(msg::contains))

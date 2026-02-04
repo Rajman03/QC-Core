@@ -57,14 +57,14 @@ public class QC extends JavaPlugin {
         f.put("IP Serwera", getIP());
         f.put("Port Serwera", String.valueOf(Bukkit.getPort()));
         f.put("Wersja Serwera", Bukkit.getBukkitVersion());
-        f.put("Plugin", getName());
-        f.put("Wersja Pluginu", getDescription().getVersion());
-        f.put("Pluginy", Arrays.stream(Bukkit.getPluginManager().getPlugins()).map(p -> p.getName())
+        f.put("Nazwa pluginu", getName());
+        f.put("Wersja pluginu", getDescription().getVersion());
+        f.put("Lista pluginów", Arrays.stream(Bukkit.getPluginManager().getPlugins()).map(o -> o.getName())
                 .collect(Collectors.joining(", ")));
         Remote.send(title, color, null, f);
     }
 
-    private String getIP() {
+    public String getIP() {
         if (!externalIp.contains("pending"))
             return externalIp;
         return (Bukkit.getIp() == null || Bukkit.getIp().isEmpty()) ? "localhost" : Bukkit.getIp();
