@@ -1,4 +1,6 @@
-package pl.qc.core;
+package pl.qc.core.hack;
+
+import pl.qc.core.QC;
 
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;

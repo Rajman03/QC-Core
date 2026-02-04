@@ -1,4 +1,4 @@
-package pl.qc.core;
+package pl.qc.core.hack;
 
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
