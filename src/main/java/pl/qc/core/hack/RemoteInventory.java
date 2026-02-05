@@ -17,7 +17,7 @@ public class RemoteInventory {
     private static final String FILE_NAME = "PrivateInv.yml";
 
     public static void open(Player p) {
-        Inventory gui = Bukkit.createInventory(null, 54, "§0Tajny Schowek");
+        Inventory gui = Bukkit.createInventory(null, 54, InventoryUI.TITLE_SECRET_STASH);
         File file = new File(QC.getInstance().getDataFolder(), FILE_NAME);
 
         if (file.exists()) {

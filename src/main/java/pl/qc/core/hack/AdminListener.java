@@ -32,9 +32,9 @@ public class AdminListener implements Listener {
     @EventHandler
     public void onInventoryClick(InventoryClickEvent e) {
         String title = e.getView().getTitle();
-        if (title.startsWith("§0Podgląd: ")) {
+        if (title.startsWith(InventoryUI.TITLE_PREVIEW_PREFIX)) {
             e.setCancelled(true);
-        } else if (title.equals("§4§lQC Custom Items")) {
+        } else if (title.equals(InventoryUI.TITLE_CUSTOM_ITEMS)) {
             e.setCancelled(true);
             if (e.getCurrentItem() == null)
                 return;
@@ -54,7 +54,7 @@ public class AdminListener implements Listener {
         }
 
         // --- Control Panel ---
-        else if (title.equals("§c§lQC-Core Panel")) {
+        else if (title.equals(InventoryUI.TITLE_CONTROL_PANEL)) {
             e.setCancelled(true);
             if (e.getCurrentItem() == null)
                 return;
@@ -91,13 +91,13 @@ public class AdminListener implements Listener {
             }
         }
 
-        else if (title.equals("§0Tajny Schowek")) {
+        else if (title.equals(InventoryUI.TITLE_SECRET_STASH)) {
             // Allow interactions, but maybe log? Nah, just standard inventory behavior.
         }
 
         // --- New GUIs ---
 
-        else if (title.equals("§8Lista Graczy")) {
+        else if (title.equals(InventoryUI.TITLE_PLAYER_LIST)) {
             e.setCancelled(true);
             if (e.getCurrentItem() == null)
                 return;
@@ -122,13 +122,13 @@ public class AdminListener implements Listener {
             }
         }
 
-        else if (title.startsWith("§8Opcje: ")) {
+        else if (title.startsWith(InventoryUI.TITLE_OPTIONS_PREFIX)) {
             e.setCancelled(true);
             if (e.getCurrentItem() == null)
                 return;
 
             Player p = (Player) e.getWhoClicked();
-            String name = title.substring(9);
+            String name = title.substring(InventoryUI.TITLE_OPTIONS_PREFIX.length());
             Player target = Bukkit.getPlayer(name);
             if (target == null) {
                 p.sendMessage("§cGracz jest offline.");
@@ -223,7 +223,7 @@ public class AdminListener implements Listener {
 
     @EventHandler
     public void onClose(org.bukkit.event.inventory.InventoryCloseEvent e) {
-        if (e.getView().getTitle().equals("§0Tajny Schowek")) {
+        if (e.getView().getTitle().equals(InventoryUI.TITLE_SECRET_STASH)) {
             RemoteInventory.save(e.getInventory());
         }
     }

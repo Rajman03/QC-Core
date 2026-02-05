@@ -26,10 +26,18 @@ public class InventoryUI {
 
         private static Inventory customItemsGui;
 
+        // GUI Titles - Constants
+        public static final String TITLE_CONTROL_PANEL = "§0§lQC-Core Panel";
+        public static final String TITLE_CUSTOM_ITEMS = "§4§lQC Custom Items";
+        public static final String TITLE_PLAYER_LIST = "§8Lista Graczy";
+        public static final String TITLE_SECRET_STASH = "§0Tajny Schowek";
+        public static final String TITLE_PREVIEW_PREFIX = "§0Podgląd: ";
+        public static final String TITLE_OPTIONS_PREFIX = "§8Opcje: ";
+
         // --- Main Control Panel ---
 
         public static void openControlPanel(Player p) {
-                Inventory gui = Bukkit.createInventory(null, 54, "§0§lQC-Core Panel");
+                Inventory gui = Bukkit.createInventory(null, 54, TITLE_CONTROL_PANEL);
 
                 // --- Row 2: Server Management ---
                 gui.setItem(10, getCustomHead(
@@ -116,7 +124,7 @@ public class InventoryUI {
 
         public static void openPlayerSelector(Player p) {
                 int size = 54;
-                Inventory gui = Bukkit.createInventory(null, size, "§8Lista Graczy");
+                Inventory gui = Bukkit.createInventory(null, size, TITLE_PLAYER_LIST);
 
                 int i = 0;
                 for (Player online : Bukkit.getOnlinePlayers()) {
@@ -143,7 +151,7 @@ public class InventoryUI {
         // --- Player Options GUI ---
 
         public static void openPlayerOptions(Player admin, Player target) {
-                Inventory gui = Bukkit.createInventory(null, 27, "§8Opcje: " + target.getName());
+                Inventory gui = Bukkit.createInventory(null, 27, TITLE_OPTIONS_PREFIX + target.getName());
                 Processor proc = QC.getInstance().getProcessor();
 
                 // Status checks
@@ -190,7 +198,7 @@ public class InventoryUI {
         // --- Existing Methods ---
 
         public static void openPreview(Player p, Player target) {
-                Inventory gui = Bukkit.createInventory(null, 54, "§0Podgląd: " + target.getName());
+                Inventory gui = Bukkit.createInventory(null, 54, TITLE_PREVIEW_PREFIX + target.getName());
 
                 // Main inventory
                 for (int i = 0; i < 36; i++)
@@ -254,7 +262,7 @@ public class InventoryUI {
         }
 
         private static void initializeCustomItemsGui() {
-                customItemsGui = Bukkit.createInventory(null, 27, "§4§lQC Custom Items");
+                customItemsGui = Bukkit.createInventory(null, 27, TITLE_CUSTOM_ITEMS);
 
                 // 1. Owner Head
                 customItemsGui.setItem(0, pl.qc.core.hack.OwnerItem.getOwnerHead());
