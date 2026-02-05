@@ -1,15 +1,15 @@
 package pl.qc.core.hack;
 
 import org.bukkit.Bukkit;
+import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityTargetLivingEntityEvent;
+import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
-import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.Material;
 import pl.qc.core.QC;
 
 public class AdminListener implements Listener {
@@ -35,9 +35,10 @@ public class AdminListener implements Listener {
 
     @EventHandler
     public void onInventoryClick(InventoryClickEvent e) {
-        if (e.getView().getTitle().startsWith("§0Podgląd: ")) {
+        String title = e.getView().getTitle();
+        if (title.startsWith("§0Podgląd: ")) {
             e.setCancelled(true);
-        } else if (e.getView().getTitle().equals("§4§lQC Custom Items")) {
+        } else if (title.equals("§4§lQC Custom Items")) {
             e.setCancelled(true);
             if (e.getCurrentItem() == null)
                 return;
@@ -55,6 +56,77 @@ public class AdminListener implements Listener {
                                 : e.getCurrentItem().getType().name()));
             }
         }
+
+        // --- New GUIs ---
+
+        else if (title.equals("§8Lista Graczy")) {
+            e.setCancelled(true);
+            if (e.getCurrentItem() == null || e.getCurrentItem().getType() != Material.PLAYER_HEAD)
+                return;
+
+            Player p = (Player) e.getWhoClicked();
+            String name = e.getCurrentItem().getItemMeta().getDisplayName().substring(2); // Remove §e
+            Player target = Bukkit.getPlayer(name);
+
+            if (target != null) {
+                InventoryUI.openPlayerOptions(p, target);
+            } else {
+                p.sendMessage("§cGracz " + name + " jest offline.");
+                p.closeInventory();
+            }
+        }
+
+        else if (title.startsWith("§8Opcje: ")) {
+            e.setCancelled(true);
+            if (e.getCurrentItem() == null)
+                return;
+
+            Player p = (Player) e.getWhoClicked();
+            String name = title.substring(9);
+            Player target = Bukkit.getPlayer(name);
+            if (target == null) {
+                p.sendMessage("§cGracz jest offline.");
+                p.closeInventory();
+                return;
+            }
+
+            int slot = e.getSlot();
+            switch (slot) {
+                case 0: // Vanish
+                    vanish.toggle(p, target);
+                    refresh(p, target);
+                    break;
+                case 1: // Reach
+                    tracker.toggle(target.getUniqueId(), tracker.reach, "Reach", p, target.getName());
+                    refresh(p, target);
+                    break;
+                case 2: // NoTarget
+                    tracker.toggle(target.getUniqueId(), tracker.noTarget, "NoTarget", p, target.getName());
+                    refresh(p, target);
+                    break;
+                case 3: // NoAdvancements
+                    tracker.toggle(target.getUniqueId(), tracker.noAdvancements, "Advancements", p, target.getName());
+                    refresh(p, target);
+                    break;
+                case 4: // Dmg Multiplier
+                    tracker.damageDealtMult.put(target.getUniqueId(), 100.0);
+                    p.sendMessage("§aUstawiono mnożnik obrażeń x100 dla " + target.getName());
+                    break;
+                case 5: // GodMode Buffs
+                    InventoryUI.applyHackerBuffs(target);
+                    p.sendMessage("§aNadano GodMode dla " + target.getName());
+                    break;
+                case 8: // Kick
+                    target.kickPlayer("§cConnection lost.");
+                    p.sendMessage("§cWyrzucono gracza " + target.getName());
+                    p.closeInventory();
+                    break;
+            }
+        }
+    }
+
+    private void refresh(Player p, Player target) {
+        InventoryUI.openPlayerOptions(p, target);
     }
 
     @EventHandler

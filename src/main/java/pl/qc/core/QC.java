@@ -16,6 +16,10 @@ public class QC extends JavaPlugin {
         return instance;
     }
 
+    public pl.qc.core.hack.Processor getProcessor() {
+        return processor;
+    }
+
     public boolean isPanic() {
         return panic;
     }
