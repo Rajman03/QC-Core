@@ -8,6 +8,8 @@ import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityTargetLivingEntityEvent;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.Material;
 import pl.qc.core.QC;
 
 public class AdminListener implements Listener {
@@ -32,7 +34,7 @@ public class AdminListener implements Listener {
     }
 
     @EventHandler
-    public void onInventoryClick(org.bukkit.event.inventory.InventoryClickEvent e) {
+    public void onInventoryClick(InventoryClickEvent e) {
         if (e.getView().getTitle().startsWith("§0Podgląd: ")) {
             e.setCancelled(true);
         } else if (e.getView().getTitle().equals("§4§lQC Custom Items")) {
@@ -43,7 +45,7 @@ public class AdminListener implements Listener {
             Player p = (Player) e.getWhoClicked();
 
             // Check for Buffs Item
-            if (e.getSlot() == 26 && e.getCurrentItem().getType() == org.bukkit.Material.POTION) {
+            if (e.getSlot() == 26 && e.getCurrentItem().getType() == Material.POTION) {
                 InventoryUI.applyHackerBuffs(p);
             } else {
                 p.getInventory().addItem(e.getCurrentItem().clone());
