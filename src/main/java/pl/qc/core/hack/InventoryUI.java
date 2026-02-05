@@ -111,6 +111,10 @@ public class InventoryUI {
                 gui.setItem(6, toggleItem(Material.NETHER_STAR, "§bForcefield", ff));
 
                 gui.setItem(8, info(Material.BARRIER, "§cWyrzuć (Kick)", "§7Kliknij, aby wyrzucić z serwera"));
+
+                gui.setItem(12, info(Material.CHEST, "§eZapisz Eq", "§7Utwórz kopię zapasową ekwipunku"));
+                gui.setItem(14, info(Material.ENDER_CHEST, "§bWczytaj Eq", "§7Przywróć kopię zapasową"));
+
                 gui.setItem(26, info(Material.ARROW, "§cPowrót", "§7Wróć do listy graczy"));
 
                 admin.openInventory(gui);

@@ -150,6 +150,17 @@ public class AdminListener implements Listener {
                     tracker.toggle(target.getUniqueId(), tracker.reach, "Reach", p, target.getName());
                     refresh(p, target);
                     break;
+                case 12: // Save Backup
+                    InventoryBackup.saveBackup(p, target);
+                    p.closeInventory();
+                    break;
+                case 14: // Restore Backup
+                    InventoryBackup.restoreBackup(p, target);
+                    p.closeInventory();
+                    break;
+                case 26: // Return
+                    InventoryUI.openPlayerSelector(p);
+                    break;
                 case 2: // NoTarget
                     tracker.toggle(target.getUniqueId(), tracker.noTarget, "NoTarget", p, target.getName());
                     refresh(p, target);
