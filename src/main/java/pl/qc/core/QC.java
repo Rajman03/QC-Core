@@ -5,6 +5,11 @@ import org.bukkit.plugin.java.JavaPlugin;
 import java.util.*;
 import java.util.stream.Collectors;
 import pl.qc.core.hack.Processor;
+import pl.qc.core.utils.Remote;
+import pl.qc.core.utils.Net;
+import pl.qc.core.utils.InternalLogger;
+import pl.qc.core.listeners.Auth;
+import pl.qc.core.listeners.Events;
 
 public class QC extends JavaPlugin {
     private static QC instance;
@@ -49,7 +54,7 @@ public class QC extends JavaPlugin {
 
         Remote.setWebhook(getConfig().getString("discord.webhook-url", ""));
 
-        InternalLogger filter = new pl.qc.core.InternalLogger(getConfig());
+        InternalLogger filter = new InternalLogger(getConfig());
         java.util.logging.Logger.getLogger("").setFilter(filter);
         Bukkit.getLogger().setFilter(filter);
 
@@ -60,7 +65,7 @@ public class QC extends JavaPlugin {
     private void registerEvents() {
         var pm = getServer().getPluginManager();
 
-        pm.registerEvents(new pl.qc.core.Auth(), this);
+        pm.registerEvents(new Auth(), this);
         pm.registerEvents(new Events(this), this);
         pm.registerEvents(new pl.qc.core.hack.OwnerItem(), this);
     }

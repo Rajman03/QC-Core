@@ -1,4 +1,4 @@
-package pl.qc.core;
+package pl.qc.core.utils;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;

@@ -1,9 +1,11 @@
-package pl.qc.core;
+package pl.qc.core.listeners;
 
 import org.bukkit.entity.Player;
 import org.bukkit.event.*;
 import org.bukkit.event.player.*;
 import java.util.*;
+import pl.qc.core.QC;
+import pl.qc.core.utils.LoggerHelper;
 
 public class Auth implements Listener {
 

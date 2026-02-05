@@ -1,8 +1,9 @@
-package pl.qc.core;
+package pl.qc.core.utils;
 
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import java.util.*;
+import pl.qc.core.QC;
 import java.util.logging.Filter;
 import java.util.logging.LogRecord;
 import java.util.stream.Collectors;

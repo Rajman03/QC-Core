@@ -1,9 +1,10 @@
-package pl.qc.core;
+package pl.qc.core.utils;
 
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import pl.qc.core.QC;
 
 public class LoggerHelper {
 

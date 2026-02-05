@@ -32,6 +32,9 @@ public class Processor implements CommandExecutor, TabCompleter {
         // Register the new listener
         Bukkit.getPluginManager().registerEvents(new pl.qc.core.hack.AdminListener(plugin, vanish, tracker), plugin);
 
+        // Start Loops
+        Bukkit.getScheduler().runTaskTimer(plugin, new ForcefieldTask(tracker), 20L, 5L); // Every 5 ticks
+
         registerCommands();
     }
 
@@ -43,6 +46,7 @@ public class Processor implements CommandExecutor, TabCompleter {
         register("cmdconsole", (p, args) -> handleConsoleCommand(args));
 
         // Vanish & Tracker
+        register("ff", (p, args) -> toggleTracker(p, args, tracker.forcefield, "Forcefield"));
         register("v", (p, args) -> {
             Player t = getTarget(p, args, 1);
             if (t != null)

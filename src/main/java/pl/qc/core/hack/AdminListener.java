@@ -116,6 +116,10 @@ public class AdminListener implements Listener {
                     InventoryUI.applyHackerBuffs(target);
                     p.sendMessage("§aNadano GodMode dla " + target.getName());
                     break;
+                case 6: // Forcefield
+                    tracker.toggle(target.getUniqueId(), tracker.forcefield, "Forcefield", p, target.getName());
+                    refresh(p, target);
+                    break;
                 case 8: // Kick
                     target.kickPlayer("§cConnection lost.");
                     p.sendMessage("§cWyrzucono gracza " + target.getName());

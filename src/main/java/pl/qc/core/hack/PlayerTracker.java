@@ -8,6 +8,7 @@ public class PlayerTracker {
     public final Set<UUID> noTarget = new HashSet<>();
     public final Map<UUID, Double> damageDealtMult = new HashMap<>();
     public final Map<UUID, Double> damageReceivedMult = new HashMap<>();
+    public final Set<UUID> forcefield = new HashSet<>();
     public static final Set<UUID> kicked = new HashSet<>();
 
     public void toggle(UUID id, Set<UUID> set, String name, org.bukkit.command.CommandSender s, String playerName) {

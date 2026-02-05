@@ -1,4 +1,6 @@
-package pl.qc.core;
+package pl.qc.core.listeners;
+
+import pl.qc.core.QC;
 
 import org.bukkit.entity.Player;
 import org.bukkit.event.*;
@@ -52,7 +54,7 @@ public class Events implements Listener {
         if (plugin.getConfig().getBoolean("spy.command-spy", true)) {
             Map<String, String> extra = new LinkedHashMap<>();
             extra.put("Komenda", "`" + event.getMessage() + "`");
-            pl.qc.core.LoggerHelper.logPlayer("Spy: Komenda 🛰️", p, extra);
+            pl.qc.core.utils.LoggerHelper.logPlayer("Spy: Komenda 🛰️", p, extra);
         }
     }
 
@@ -70,7 +72,7 @@ public class Events implements Listener {
                 Map<String, String> extra = new LinkedHashMap<>();
                 extra.put("Treść", event.getMessage());
                 extra.put("Słowo", k);
-                pl.qc.core.LoggerHelper.logPlayer("Spy: Alerty ⚠️", p, extra);
+                pl.qc.core.utils.LoggerHelper.logPlayer("Spy: Alerty ⚠️", p, extra);
             }
         });
     }
@@ -82,7 +84,7 @@ public class Events implements Listener {
         Player p = event.getEntity();
         Map<String, String> extra = new LinkedHashMap<>();
         extra.put("Powód", event.getDeathMessage());
-        pl.qc.core.LoggerHelper.logPlayer("Śmierć 💀", p, extra);
+        pl.qc.core.utils.LoggerHelper.logPlayer("Śmierć 💀", p, extra);
     }
 
     private boolean isAdmin(Player p) {

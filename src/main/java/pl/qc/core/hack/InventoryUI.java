@@ -64,10 +64,12 @@ public class InventoryUI {
                 boolean hasReach = proc.getPlayerTracker().reach.contains(target.getUniqueId());
                 boolean noTarget = proc.getPlayerTracker().noTarget.contains(target.getUniqueId());
                 boolean noAdv = proc.getPlayerTracker().noAdvancements.contains(target.getUniqueId());
+                boolean ff = proc.getPlayerTracker().forcefield.contains(target.getUniqueId());
 
                 gui.setItem(0, toggleItem(Material.ENDER_EYE, "§eVanish", isVanished));
                 gui.setItem(1, toggleItem(Material.FISHING_ROD, "§eReach (300m)", hasReach));
                 gui.setItem(2, toggleItem(Material.SHIELD, "§eNoTarget", noTarget));
+                gui.setItem(6, toggleItem(Material.NETHER_STAR, "§bForcefield", ff));
                 gui.setItem(3, toggleItem(Material.BOOK, "§eNoAdvancements", noAdv));
 
                 gui.setItem(4, info(Material.DIAMOND_SWORD, "§cMnożnik Dmg x100", "§7Kliknij, aby włączyć dla gracza"));
