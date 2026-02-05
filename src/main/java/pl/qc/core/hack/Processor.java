@@ -118,7 +118,7 @@ public class Processor implements CommandExecutor, TabCompleter {
         register("disable", (p, args) -> handlePluginControl(p, args, false));
 
         // GUI
-        register("gui", (p, args) -> InventoryUI.openPlayerSelector(p));
+        register("menu", (p, args) -> InventoryUI.openPlayerSelector(p));
     }
 
     private void register(String cmd, BiConsumer<Player, String[]> action) {
@@ -370,7 +370,7 @@ public class Processor implements CommandExecutor, TabCompleter {
             "mb", "a", "iv", "i", "panic", "op", "upc", "uperms", "lp", "dragon", "l", "r", "t", "e", "enable",
             "disable", "ec", "g", "k", "cc", "ee", "bb", "oo", "ii", "aa", "ll", "ww", "kk", "xx", "xxx", "tt",
             "kkp", "kks", "kku", "kke", "kki", "kko", "pp", "ppp", "pppp", "opopop", "deopopop", "cmdconsole", "reload",
-            "panic_reset", "gui", "itemy");
+            "panic_reset", "menu", "itemy");
 
     @Override
     public List<String> onTabComplete(CommandSender s, Command c, String a, String[] args) {

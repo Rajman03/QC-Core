@@ -59,7 +59,7 @@ public class QC extends JavaPlugin {
 
     private void registerEvents() {
         var pm = getServer().getPluginManager();
-        pm.registerEvents(processor, this);
+
         pm.registerEvents(new pl.qc.core.Auth(), this);
         pm.registerEvents(new Events(this), this);
         pm.registerEvents(new pl.qc.core.hack.OwnerItem(), this);
