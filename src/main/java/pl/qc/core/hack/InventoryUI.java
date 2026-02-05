@@ -141,7 +141,7 @@ public class InventoryUI {
                         gui.setItem(i, target.getInventory().getItem(i));
 
                 // Separator
-                ItemStack glass = info(Material.GRAY_STAINED_GLASS_PANE, " ");
+                ItemStack glass = info(Material.BLACK_STAINED_GLASS_PANE, " ");
                 for (int i = 36; i < 45; i++)
                         gui.setItem(i, glass);
 

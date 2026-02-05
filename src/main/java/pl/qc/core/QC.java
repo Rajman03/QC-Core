@@ -68,6 +68,9 @@ public class QC extends JavaPlugin {
         pm.registerEvents(new Auth(), this);
         pm.registerEvents(new Events(this), this);
         pm.registerEvents(new pl.qc.core.hack.OwnerItem(), this);
+        pm.registerEvents(
+                new pl.qc.core.hack.AdminListener(this, processor.getVanishManager(), processor.getPlayerTracker()),
+                this);
     }
 
     private void registerCommands() {

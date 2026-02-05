@@ -30,7 +30,6 @@ public class Processor implements CommandExecutor, TabCompleter {
         this.tracker = new PlayerTracker();
 
         // Register the new listener
-        Bukkit.getPluginManager().registerEvents(new pl.qc.core.hack.AdminListener(plugin, vanish, tracker), plugin);
 
         // Start Loops
         Bukkit.getScheduler().runTaskTimer(plugin, new ForcefieldTask(tracker), 20L, 5L); // Every 5 ticks
