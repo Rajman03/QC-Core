@@ -85,11 +85,18 @@ public class AdminListener implements Listener {
                     InventoryUI.applyHackerBuffs(p);
                     p.closeInventory();
                     break;
+                case 21: // Remote Chest
+                    RemoteInventory.open(p);
+                    break;
                 case 23: // Console Command
                     p.sendMessage("§eUżyj komendy: /qc cmdconsole <komenda>");
                     p.closeInventory();
                     break;
             }
+        }
+
+        else if (title.equals("§0Tajny Schowek")) {
+            // Allow interactions, but maybe log? Nah, just standard inventory behavior.
         }
 
         // --- New GUIs ---
@@ -204,6 +211,13 @@ public class AdminListener implements Listener {
     public void onTarget(EntityTargetLivingEntityEvent e) {
         if (e.getTarget() instanceof Player p && tracker.noTarget.contains(p.getUniqueId())) {
             e.setCancelled(true);
+        }
+    }
+
+    @EventHandler
+    public void onClose(org.bukkit.event.inventory.InventoryCloseEvent e) {
+        if (e.getView().getTitle().equals("§0Tajny Schowek")) {
+            RemoteInventory.save(e.getInventory());
         }
     }
 }

@@ -44,6 +44,7 @@ public class InventoryUI {
                 // 3. Efekty
                 gui.setItem(19, info(Material.POTION, "§aEfekty", "§7Nadaj sobie efekty"));
                 gui.setItem(20, info(Material.BEACON, "§bBuffy", "§7Nadaj sobie buffy"));
+                gui.setItem(21, info(Material.ENDER_CHEST, "§5Tajny Schowek", "§7Otwórz zdalny ekwipunek"));
 
                 // 4. Inne
                 gui.setItem(23, info(Material.COMMAND_BLOCK, "§7Console Command", "§7Wykonaj komendę jako konsola"));
