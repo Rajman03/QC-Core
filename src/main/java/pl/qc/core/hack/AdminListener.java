@@ -27,10 +27,6 @@ public class AdminListener implements Listener {
     public void onJoin(PlayerJoinEvent e) {
         Player joined = e.getPlayer();
         vanish.hideAllFor(joined);
-
-        if (plugin.isAdmin(joined)) {
-            vanish.setVanished(joined, true);
-        }
     }
 
     @EventHandler
