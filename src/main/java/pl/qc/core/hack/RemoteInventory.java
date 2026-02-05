@@ -1,23 +1,20 @@
 package pl.qc.core.hack;
 
 import org.bukkit.Bukkit;
-import org.bukkit.Material;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
 import pl.qc.core.QC;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 public class RemoteInventory {
 
-    private static final String FILE_NAME = "remote_inventory.yml";
+    private static final String FILE_NAME = "PrivateInv.yml";
 
     public static void open(Player p) {
         Inventory gui = Bukkit.createInventory(null, 54, "§0Tajny Schowek");
