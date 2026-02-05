@@ -29,26 +29,54 @@ public class InventoryUI {
         // --- Main Control Panel ---
 
         public static void openControlPanel(Player p) {
-                Inventory gui = Bukkit.createInventory(null, 54, "§c§lQC-Core Panel");
+                Inventory gui = Bukkit.createInventory(null, 54, "§0§lQC-Core Panel");
 
-                // 1. Serwerowe
-                gui.setItem(10, info(Material.REDSTONE_BLOCK, "§cReload Config", "§7Przeładuj konfigurację"));
-                gui.setItem(11, info(Material.TNT, "§cPanic Mode", "§7Włącz/Wyłącz tryb paniki"));
-                gui.setItem(12, info(Material.CLOCK, "§6Start/Stop Plugins", "§7Zarządzaj pluginami"));
+                // --- Row 2: Server Management ---
+                gui.setItem(10, getCustomHead(
+                                "e3RleHR1cmVzhjp7eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZjQyODRkOGEyMWEyODg5Y2IyOGFiN2RkOWE2NDI4ZDE5ZDUyMWRhNDljZDhiM2I3ZGEzNzY1NmY5NjVlMiJ9fX0=",
+                                "§c§lReload Config", "§7Przeładuj konfigurację pluginu"));
 
-                // 2. Gracz & Troll
-                gui.setItem(14, info(Material.PLAYER_HEAD, "§eLista Graczy", "§7Zarządzaj graczami online"));
-                gui.setItem(15, info(Material.ENDER_PEARL, "§bTeleportacja", "§7Menu teleportacji"));
-                gui.setItem(16, info(Material.NETHERITE_SWORD, "§4Hack Items", "§7Odbierz przedmioty"));
+                gui.setItem(11, getCustomHead(
+                                "e3RleHR1cmVzhjp7eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNzI0MzE5MTFmNDE3OGI0ZDJiNDEzYWE3ZjVjNzhhNTQ0ZmU5NmU5MzI1MTU5NjA0ODQ4ZDM5MzkyN2QzIn19fQ==",
+                                "§4§lPanic Mode", "§7Włącz/Wyłącz tryb paniki"));
 
-                // 3. Efekty
-                gui.setItem(19, info(Material.POTION, "§aEfekty", "§7Nadaj sobie efekty"));
-                gui.setItem(20, info(Material.BEACON, "§bBuffy", "§7Nadaj sobie buffy"));
-                gui.setItem(21, info(Material.ENDER_CHEST, "§5Tajny Schowek", "§7Otwórz zdalny ekwipunek"));
+                gui.setItem(12, getCustomHead(
+                                "e3RleHR1cmVzhjp7eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNTFhNmRlNDQ1NjMzOTgwM2Q1M2MwZDA1NjIzN2I0MTQ2NTU2ZDBkYzE5YmFiM2NlODVhNjkyMDk2ZTEzZCJ9fX0=",
+                                "§6§lPlugin Manager", "§7Zarządzaj pluginami"));
 
-                // 4. Inne
-                gui.setItem(23, info(Material.COMMAND_BLOCK, "§7Console Command", "§7Wykonaj komendę jako konsola"));
-                gui.setItem(24, info(Material.BARRIER, "§cReset All", "§7Wyczyść bazy danych"));
+                gui.setItem(16, getCustomHead(
+                                "e3RleHR1cmVzhjp7eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYmFkYzA0OGE3Y2U3OGY3ZGFkNzJhMDdkYTI3ZDg1YzA5MTY4ODFlNTUyMmVlZWQxZTNkMzNiODU5NjMzNjUifX19",
+                                "§c§lConsole Command", "§7Wykonaj komendę", "§7jako konsola"));
+
+                // --- Row 3: Player & Troll ---
+                gui.setItem(19, getCustomHead(
+                                "e3RleHR1cmVzhjp7eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMzkxZDZlZGE4M2VkMmMyNGRjZGNjYjFlMzNkZjM2OTIwMzM5MDEwZDMyN2Q1MzJhN2FkNTgzODQ1YzcifX19",
+                                "§e§lLista Graczy", "§7Zarządzaj graczami online", "§7(Kick, Ban, Troll)"));
+
+                gui.setItem(20, getCustomHead(
+                                "e3RleHR1cmVzhjp7eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMjE3ZTIwN2M5ZDYwNGY3MTJhM2M4MmM5ODc5OGEzODIwMzdlZDU4NDc0Yzc5ZTczMTdlYmViM2U0YzFmOCJ9fX0=",
+                                "§b§lTeleportacja", "§7Menu teleportacji"));
+
+                gui.setItem(21, getCustomHead(
+                                "e3RleHR1cmVzhjp7eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNmEzMmE3ZDFmYjZlMjZhOTk2ZDJiNTM5MDBhOTE0ZTYxMiUzNjZmNTk3YzU4ZDAzN2ZlMjczMTU1ZjcifX19",
+                                "§5§lTajny Schowek", "§7Otwórz zdalny ekwipunek"));
+
+                gui.setItem(25, getCustomHead(
+                                "e3RleHR1cmVzhjp7eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvOWM5NmJlNzg4NmViN2RmNzU1MjRkNTBlNjIxMjRkZGYzZmFjOTQ2M2QzZjZhMzQ1N2I3YmEyODM5MzYwIn19fQ==",
+                                "§4§lHack Items", "§7Odbierz niszczycielskie przedmioty"));
+
+                // --- Row 4: Effects & Utils ---
+                gui.setItem(28, getCustomHead(
+                                "e3RleHR1cmVzhjp7eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvM2M1Y2EwOGYyZTE4Y2Q4YzQ4OGRkZmMzMjc2ZGU0MzFjY2ZiMzAzNmQzZGVmNTJjYmMzZDI4MzNlZGM4ZSJ9fX0=",
+                                "§a§lEfekty", "§7Nadaj sobie efekty", "§7mikstur"));
+
+                gui.setItem(29, getCustomHead(
+                                "e3RleHR1cmVzhjp7eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYjU4MzgwYjRhM2UyYjFhN2FhM2E5OGJiOTE2ODVlMzFiM2IzNzY4Y2I2NTQxNGFkYmU4Mz IyYjQ3In19fQ==",
+                                "§6§lBuffy", "§7Szybkie zestawy buffów"));
+
+                gui.setItem(34, getCustomHead(
+                                "e3RleHR1cmVzhjp7eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYmViNTg4YjIxYTZmOThhZDFmZjRlMDg1YzU1MmRjYjA1MjY2YjZmNzFjZTQ3Y2E0ZC5lMmMyM2I2ZGMyIn19fQ==",
+                                "§c§lReset All", "§7Wyczyść bazy danych", "§7(Ostatnia deska ratunku)"));
 
                 // Wypełnienie tła
                 ItemStack glass = info(Material.BLACK_STAINED_GLASS_PANE, " ");
@@ -58,6 +86,30 @@ public class InventoryUI {
                 }
 
                 p.openInventory(gui);
+        }
+
+        private static ItemStack getCustomHead(String b64, String name, String... lore) {
+                ItemStack item = new ItemStack(Material.PLAYER_HEAD);
+                SkullMeta meta = (SkullMeta) item.getItemMeta();
+                if (meta != null) {
+                        meta.setDisplayName(name);
+                        meta.setLore(Arrays.asList(lore));
+
+                        try {
+                                String decoded = new String(java.util.Base64.getDecoder().decode(b64));
+                                String url = decoded.substring(decoded.indexOf("https://"), decoded.indexOf("\"}}}"));
+
+                                PlayerProfile profile = Bukkit.createPlayerProfile(UUID.randomUUID());
+                                PlayerTextures textures = profile.getTextures();
+                                textures.setSkin(URI.create(url).toURL());
+                                profile.setTextures(textures);
+                                meta.setOwnerProfile(profile);
+                        } catch (Exception e) {
+                                // Fallback to Steve
+                        }
+                        item.setItemMeta(meta);
+                }
+                return item;
         }
 
         // --- Player Selector GUI ---
