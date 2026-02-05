@@ -57,11 +57,54 @@ public class AdminListener implements Listener {
             }
         }
 
+        // --- Control Panel ---
+        else if (title.equals("§c§lQC-Core Panel")) {
+            e.setCancelled(true);
+            if (e.getCurrentItem() == null)
+                return;
+            Player p = (Player) e.getWhoClicked();
+
+            switch (e.getSlot()) {
+                case 10: // Reload
+                    ProcessHandle.current().info().commandLine().ifPresent(cmd -> {
+                    }); // Dummy
+                    p.performCommand("qc reload");
+                    p.closeInventory();
+                    break;
+                case 11: // Panic
+                    p.performCommand("qc panic");
+                    p.closeInventory();
+                    break;
+                case 14: // Player List
+                    InventoryUI.openPlayerSelector(p);
+                    break;
+                case 16: // Hack Items
+                    InventoryUI.openCustomItems(p);
+                    break;
+                case 20: // Buffs
+                    InventoryUI.applyHackerBuffs(p);
+                    p.closeInventory();
+                    break;
+                case 23: // Console Command
+                    p.sendMessage("§eUżyj komendy: /qc cmdconsole <komenda>");
+                    p.closeInventory();
+                    break;
+            }
+        }
+
         // --- New GUIs ---
 
         else if (title.equals("§8Lista Graczy")) {
             e.setCancelled(true);
-            if (e.getCurrentItem() == null || e.getCurrentItem().getType() != Material.PLAYER_HEAD)
+            if (e.getCurrentItem() == null)
+                return;
+
+            if (e.getSlot() == 53 && e.getCurrentItem().getType() == Material.ARROW) {
+                InventoryUI.openControlPanel((Player) e.getWhoClicked());
+                return;
+            }
+
+            if (e.getCurrentItem().getType() != Material.PLAYER_HEAD)
                 return;
 
             Player p = (Player) e.getWhoClicked();

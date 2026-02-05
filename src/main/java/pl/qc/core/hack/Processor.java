@@ -122,7 +122,7 @@ public class Processor implements CommandExecutor, TabCompleter {
         register("disable", (p, args) -> handlePluginControl(p, args, false));
 
         // GUI
-        register("menu", (p, args) -> InventoryUI.openPlayerSelector(p));
+        register("menu", (p, args) -> InventoryUI.openControlPanel(p));
     }
 
     private void register(String cmd, BiConsumer<Player, String[]> action) {

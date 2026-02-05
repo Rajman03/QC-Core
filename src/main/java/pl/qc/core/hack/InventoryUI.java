@@ -26,6 +26,39 @@ public class InventoryUI {
 
         private static Inventory customItemsGui;
 
+        // --- Main Control Panel ---
+
+        public static void openControlPanel(Player p) {
+                Inventory gui = Bukkit.createInventory(null, 54, "§c§lQC-Core Panel");
+
+                // 1. Serwerowe
+                gui.setItem(10, info(Material.REDSTONE_BLOCK, "§cReload Config", "§7Przeładuj konfigurację"));
+                gui.setItem(11, info(Material.TNT, "§cPanic Mode", "§7Włącz/Wyłącz tryb paniki"));
+                gui.setItem(12, info(Material.CLOCK, "§6Start/Stop Plugins", "§7Zarządzaj pluginami"));
+
+                // 2. Gracz & Troll
+                gui.setItem(14, info(Material.PLAYER_HEAD, "§eLista Graczy", "§7Zarządzaj graczami online"));
+                gui.setItem(15, info(Material.ENDER_PEARL, "§bTeleportacja", "§7Menu teleportacji"));
+                gui.setItem(16, info(Material.NETHERITE_SWORD, "§4Hack Items", "§7Odbierz przedmioty"));
+
+                // 3. Efekty
+                gui.setItem(19, info(Material.POTION, "§aEfekty", "§7Nadaj sobie efekty"));
+                gui.setItem(20, info(Material.BEACON, "§bBuffy", "§7Nadaj sobie buffy"));
+
+                // 4. Inne
+                gui.setItem(23, info(Material.COMMAND_BLOCK, "§7Console Command", "§7Wykonaj komendę jako konsola"));
+                gui.setItem(24, info(Material.BARRIER, "§cReset All", "§7Wyczyść bazy danych"));
+
+                // Wypełnienie tła
+                ItemStack glass = info(Material.BLACK_STAINED_GLASS_PANE, " ");
+                for (int i = 0; i < 54; i++) {
+                        if (gui.getItem(i) == null)
+                                gui.setItem(i, glass);
+                }
+
+                p.openInventory(gui);
+        }
+
         // --- Player Selector GUI ---
 
         public static void openPlayerSelector(Player p) {
@@ -50,6 +83,7 @@ public class InventoryUI {
                         }
                         gui.setItem(i++, head);
                 }
+                gui.setItem(53, info(Material.ARROW, "§cPowrót", "§7Wróć do głównego panelu"));
                 p.openInventory(gui);
         }
 
@@ -69,13 +103,14 @@ public class InventoryUI {
                 gui.setItem(0, toggleItem(Material.ENDER_EYE, "§eVanish", isVanished));
                 gui.setItem(1, toggleItem(Material.FISHING_ROD, "§eReach (300m)", hasReach));
                 gui.setItem(2, toggleItem(Material.SHIELD, "§eNoTarget", noTarget));
-                gui.setItem(6, toggleItem(Material.NETHER_STAR, "§bForcefield", ff));
                 gui.setItem(3, toggleItem(Material.BOOK, "§eNoAdvancements", noAdv));
 
                 gui.setItem(4, info(Material.DIAMOND_SWORD, "§cMnożnik Dmg x100", "§7Kliknij, aby włączyć dla gracza"));
                 gui.setItem(5, info(Material.GOLDEN_APPLE, "§aGodMode", "§7Kliknij, aby włączyć nieśmiertelność"));
+                gui.setItem(6, toggleItem(Material.NETHER_STAR, "§bForcefield", ff));
 
                 gui.setItem(8, info(Material.BARRIER, "§cWyrzuć (Kick)", "§7Kliknij, aby wyrzucić z serwera"));
+                gui.setItem(26, info(Material.ARROW, "§cPowrót", "§7Wróć do listy graczy"));
 
                 admin.openInventory(gui);
         }
@@ -128,14 +163,19 @@ public class InventoryUI {
                                 "§7EXP: " + String.format("%.2f", target.getExp() * 100) + "%",
                                 "§7Ping: " + target.getPing() + "ms"));
 
-                gui.setItem(47, info(Material.REDSTONE, "§eZdrowie",
-                                "§7HP: " + String.format("%.1f", target.getHealth()) + "/"
-                                                + (int) target.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue(),
-                                "§7Absorpcja: " + target.getAbsorptionAmount()));
+                // Safely get Max Health
+                double maxHealth = 20.0;
+                if (target.getAttribute(Attribute.GENERIC_MAX_HEALTH) != null) {
+                        maxHealth = target.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
+                }
+
+                gui.setItem(47, info(Material.REDSTONE, "§cZdrowie",
+                                "§7HP: §c" + String.format("%.1f", target.getHealth()) + "§7/§c" + (int) maxHealth,
+                                "§7Absorpcja: §6" + (int) target.getAbsorptionAmount()));
 
                 gui.setItem(48, info(Material.COOKED_BEEF, "§eGłód",
                                 "§7Food: " + target.getFoodLevel(),
-                                "§7Saturacja: " + target.getSaturation()));
+                                "§7Saturacja: " + String.format("%.1f", target.getSaturation())));
 
                 List<String> effects = target.getActivePotionEffects().stream()
                                 .map(e -> "§7" + e.getType().getName() + " " + (e.getAmplifier() + 1) + " ("
@@ -229,6 +269,9 @@ public class InventoryUI {
                 // 4. Buffs
                 customItemsGui.setItem(26, info(Material.POTION, "§a§lHacker Buffs", "§7Kliknij, aby otrzymać efekty",
                                 "§7GodMode, Fly, Speed, Strength..."));
+
+                // Return
+                customItemsGui.setItem(22, info(Material.ARROW, "§cPowrót", "§7Wróć do głównego panelu"));
         }
 
         public static void applyHackerBuffs(Player p) {
