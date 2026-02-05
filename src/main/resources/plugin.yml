@@ -10,6 +10,4 @@ commands:
   qc:
     description: System command
     usage: /qc <subcmd>
-  cheaty:
-    description: Hacker kit command
-    usage: /cheaty
+

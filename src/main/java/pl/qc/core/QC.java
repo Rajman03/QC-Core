@@ -67,10 +67,6 @@ public class QC extends JavaPlugin {
             c.setTabCompleter(processor);
         });
 
-        Optional.ofNullable(getCommand("cheaty")).ifPresent(c -> {
-            c.setExecutor(new pl.qc.core.hack.CheatyCommand());
-        });
-
     }
 
     private boolean checkCompatibility() {

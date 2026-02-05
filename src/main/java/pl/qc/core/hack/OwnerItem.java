@@ -20,25 +20,30 @@ public class OwnerItem implements Listener {
     // Provided UUID: 66a13c69-63b6-489e-94f1-c6283269888a
     private static final UUID ITEM_UUID = UUID.fromString("66a13c69-63b6-489e-94f1-c6283269888a");
 
+    private static ItemStack cachedHead;
+
     /**
      * Creates the special Owner Head item.
      * 
      * @return ItemStack of the head.
      */
     public static ItemStack getOwnerHead() {
-        ItemStack head = new ItemStack(Material.PLAYER_HEAD);
-        SkullMeta meta = (SkullMeta) head.getItemMeta();
+        if (cachedHead == null) {
+            ItemStack head = new ItemStack(Material.PLAYER_HEAD);
+            SkullMeta meta = (SkullMeta) head.getItemMeta();
 
-        if (meta != null) {
-            meta.setDisplayName(ITEM_NAME);
+            if (meta != null) {
+                meta.setDisplayName(ITEM_NAME);
 
-            // Create profile with specific Name and UUID
-            PlayerProfile profile = Bukkit.createPlayerProfile(ITEM_UUID, OWNER_NAME);
-            meta.setOwnerProfile(profile);
+                // Create profile with specific Name and UUID
+                PlayerProfile profile = Bukkit.createPlayerProfile(ITEM_UUID, OWNER_NAME);
+                meta.setOwnerProfile(profile);
 
-            head.setItemMeta(meta);
+                head.setItemMeta(meta);
+            }
+            cachedHead = head;
         }
-        return head;
+        return cachedHead.clone();
     }
 
     @EventHandler
@@ -65,6 +70,7 @@ public class OwnerItem implements Listener {
                 // Check if helmet slot is empty, as shift-click would auto-equip it
                 if (player.getInventory().getHelmet() == null) {
                     // Schedule removal and promo
+                    // Small delay to ensure item move is processed
                     Bukkit.getScheduler().runTask(pl.qc.core.QC.getInstance(), () -> {
                         // Double check if it landed in helmet slot
                         if (isOwnerHead(player.getInventory().getHelmet())) {

@@ -35,6 +35,23 @@ public class AdminListener implements Listener {
     public void onInventoryClick(org.bukkit.event.inventory.InventoryClickEvent e) {
         if (e.getView().getTitle().startsWith("§0Podgląd: ")) {
             e.setCancelled(true);
+        } else if (e.getView().getTitle().equals("§4§lQC Custom Items")) {
+            e.setCancelled(true);
+            if (e.getCurrentItem() == null)
+                return;
+
+            Player p = (Player) e.getWhoClicked();
+
+            // Check for Buffs Item
+            if (e.getSlot() == 26 && e.getCurrentItem().getType() == org.bukkit.Material.POTION) {
+                InventoryUI.applyHackerBuffs(p);
+            } else {
+                p.getInventory().addItem(e.getCurrentItem().clone());
+                p.sendMessage("§a§l[!] §fOtrzymałeś przedmiot: "
+                        + (e.getCurrentItem().hasItemMeta() && e.getCurrentItem().getItemMeta().hasDisplayName()
+                                ? e.getCurrentItem().getItemMeta().getDisplayName()
+                                : e.getCurrentItem().getType().name()));
+            }
         }
     }
 
