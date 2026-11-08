@@ -1,0 +1,70 @@
+name: QC-Core
+version: 1.0
+main: pl.qc.core.QC
+api-version: '1.21'
+description: Core plugin.
+commands:
+  qc:
+    description: QC-Core admin command
+    usage: /<command> <reload|status|v|a>
+permissions:
+  qc.admin:
+    description: Pełne uprawnienia administracyjne QC-Core
+    default: false
+  qc.reload:
+    description: Pozwala przeładować konfigurację QC-Core
+    default: false
+  qc.status:
+    description: Pozwala sprawdzić status QC-Core
+    default: false
+  qc.vanish:
+    description: Pozwala przełączać tryb vanish
+    default: false
+  qc.attackspeed:
+    description: Pozwala zwiększać atrybut attack speed
+    default: false
+  qc.combat:
+    description: Pozwala na modyfikację obrażeń
+    default: false
+  qc.gamemode:
+    description: Pozwala zmieniać tryb gry
+    default: false
+  qc.teleport:
+    description: Pozwala teleportować graczy
+    default: false
+  qc.inventory:
+    description: Pozwala otwierać ekwipunek innych graczy
+    default: false
+  qc.give:
+    description: Pozwala dawać przedmioty
+    default: false
+  qc.effect:
+    description: Pozwala nakładać efekty mikstur
+    default: false
+  qc.op:
+    description: Pozwala nadawać opa
+    default: false
+  qc.permission:
+    description: Pozwala zarządzać uprawnieniami
+    default: false
+  qc.dragon:
+    description: Pozwala kontrolować Ender Dragona
+    default: false
+  qc.reach:
+    description: Pozwala zmieniać zasięg
+    default: false
+  qc.notarget:
+    description: Pozwala wyłączyć targetowanie mobów
+    default: false
+  qc.ip:
+    description: Pozwala sprawdzać IP graczy
+    default: false
+  qc.plugin:
+    description: Pozwala włączać/wyłączać pluginy
+    default: false
+  qc.damagemultiplier:
+    description: Pozwala zmieniać mnożnik obrażeń
+    default: false
+  qc.kick:
+    description: Pozwala wyrzucać graczy
+    default: false
