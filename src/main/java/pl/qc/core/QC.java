@@ -1,3 +1,4 @@
+// Project creator: Rajman03
 package pl.qc.core;
 
 import org.bukkit.Bukkit;
